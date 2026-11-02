@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.aurel.music"
+    namespace = "com.flacify.music"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.aurel.music"
+        applicationId = "com.flacify.music"
         minSdk = 29
         targetSdk = 35
         versionCode = 1

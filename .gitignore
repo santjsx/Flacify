@@ -1,16 +1,83 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-*/build
+# Android built binaries and outputs
 *.apk
+*.ap_
 *.aab
 *.dex
+*.class
+
+# Build directory outputs
+build/
+*/build/
+bin/
+gen/
+out/
+
+# Gradle files and caches
+.gradle/
+buildOutputCleanupCache/
+
+# Local configuration (SDK paths, local flags)
+local.properties
+
+# Proguard / R8
+proguard/
+*.pro.user
+
+# Android Studio & IntelliJ IDEA
+*.iml
+.idea/
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+.navigation/
 captures/
-.externalNativeBuild
-.cxx
-.kotlin
 
+# Visual Studio Code
+.vscode/
 
+# Kotlin
+.kotlin/
+kotlin-js-store/
+
+# Native builds
+.externalNativeBuild/
+.cxx/
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# Keystore and signing keys
+*.jks
+*.keystore
+signing.properties
+
+# Documentation & Markdown rules:
+# Exclude ALL .md, .doc, .docx, .txt, .pdf files EXCEPT README.md
+*.md
+**/*.md
+!/README.md
+!README.md
+*.doc
+*.docx
+*.txt
+**/*.txt
+*.pdf
+**/*.pdf
+*.rtf
+*.odt
+
+# Allow project documentation media
+!docs/
+!docs/**
+
+# Temporary diagnostic logs
+*.log

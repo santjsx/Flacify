@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Aurel"
+rootProject.name = "FLACify"
 include(":app")
 
