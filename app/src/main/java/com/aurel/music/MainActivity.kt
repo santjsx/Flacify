@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import com.aurel.music.core.audio.equalizer.EqualizerController
 import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.data.repository.PlaybackRepository
+import com.aurel.music.core.data.repository.PlaylistRepository
 import com.aurel.music.core.data.repository.SongRepository
 import com.aurel.music.core.data.repository.ThemeMode
 import com.aurel.music.core.data.repository.UserPreferencesRepository
@@ -44,6 +45,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var equalizerController: EqualizerController
+
+    @Inject
+    lateinit var playlistRepository: PlaylistRepository
 
     @Inject
     lateinit var userPreferencesRepository: UserPreferencesRepository
@@ -83,6 +87,8 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NavigationScaffold(
                         playbackRepository = playbackRepository,
+                        songRepository = songRepository,
+                        playlistRepository = playlistRepository,
                         sleepTimerManager = sleepTimerManager,
                         equalizerController = equalizerController,
                         modifier = Modifier.fillMaxSize()

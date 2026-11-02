@@ -57,6 +57,8 @@ fun MoreScreen(
     onRescanClick: () -> Unit,
     onEqualizerClick: () -> Unit = {},
     onSleepTimerClick: () -> Unit = {},
+    onFavoritesClick: () -> Unit = {},
+    onPlaylistsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -97,6 +99,7 @@ fun MoreScreen(
                     subtitle = "Your liked songs",
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onFavoritesClick()
                     }
                 )
                 PreferenceRow(
@@ -105,6 +108,7 @@ fun MoreScreen(
                     subtitle = "Custom track collections",
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onPlaylistsClick()
                     }
                 )
             }

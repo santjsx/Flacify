@@ -1,6 +1,7 @@
 package com.aurel.music.feature.nowplaying
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,21 +14,26 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ClearAll
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
@@ -52,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -61,6 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.aurel.music.core.audio.equalizer.EqualizerController
 import com.aurel.music.core.audio.timer.SleepTimerManager
+import com.aurel.music.core.data.repository.PlaylistRepository
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.designsystem.theme.rememberArtworkBackgroundBrush
 import com.aurel.music.core.model.RepeatMode
@@ -70,6 +78,7 @@ import com.aurel.music.core.ui.component.MarqueeText
 import com.aurel.music.core.ui.component.SongRow
 import com.aurel.music.feature.equalizer.EqualizerSheet
 import com.aurel.music.feature.lyrics.LyricsScreen
+import com.aurel.music.feature.playlists.AddToPlaylistSheet
 import com.aurel.music.feature.timer.SleepTimerSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,7 +87,10 @@ fun NowPlayingScreen(
     viewModel: NowPlayingViewModel,
     sleepTimerManager: SleepTimerManager,
     equalizerController: EqualizerController,
+    playlistRepository: PlaylistRepository,
     onDismiss: () -> Unit,
+    onGoToAlbum: (Long) -> Unit = {},
+    onGoToArtist: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -95,6 +107,9 @@ fun NowPlayingScreen(
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showEqualizerSheet by remember { mutableStateOf(false) }
     var showLyricsScreen by remember { mutableStateOf(false) }
+    var showMoreMenuSheet by remember { mutableStateOf(false) }
+    var showAudioInfoDialog by remember { mutableStateOf(false) }
+    var showAddToPlaylistSheet by remember { mutableStateOf(false) }
 
     if (currentSong == null) {
         onDismiss()
@@ -301,7 +316,7 @@ fun NowPlayingScreen(
                 }
             }
 
-            // 6. Secondary Controls: Shuffle, Repeat, Lyrics, Equalizer, Queue
+            // 6. Secondary Controls: Shuffle, Repeat, Queue, Sleep Timer, More (PRD Section 6.1)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -338,45 +353,46 @@ fun NowPlayingScreen(
                 IconButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showLyricsScreen = true
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Lyrics,
-                        contentDescription = "View synchronized lyrics",
-                        tint = AurelTheme.colors.secondaryText
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showEqualizerSheet = true
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Equalizer,
-                        contentDescription = "Open audio equalizer",
-                        tint = AurelTheme.colors.secondaryText
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showQueueSheet = true
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.QueueMusic,
+                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                         contentDescription = "Open Up Next queue",
+                        tint = AurelTheme.colors.secondaryText
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showSleepTimerSheet = true
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = "Sleep timer",
+                        tint = AurelTheme.colors.secondaryText
+                    )
+                }
+
+                // 5th Secondary Action: More Menu (PRD Section 6.1)
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showMoreMenuSheet = true
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreHoriz,
+                        contentDescription = "More playback options",
                         tint = AurelTheme.colors.secondaryText
                     )
                 }
             }
         }
 
-        // Up Next Queue Bottom Sheet with Reordering / Removal & Clear Queue Confirmation
+        // Up Next Queue Bottom Sheet
         if (showQueueSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showQueueSheet = false },
@@ -453,6 +469,96 @@ fun NowPlayingScreen(
             }
         }
 
+        // More Menu Bottom Sheet (PRD Section 6.1)
+        if (showMoreMenuSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showMoreMenuSheet = false },
+                containerColor = AurelTheme.colors.surfaceElevated,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "Options",
+                        style = AurelTheme.typography.sectionTitle,
+                        color = AurelTheme.colors.primaryText,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    MoreActionRow(
+                        icon = Icons.Default.Lyrics,
+                        title = "Synchronized Lyrics",
+                        onClick = {
+                            showMoreMenuSheet = false
+                            showLyricsScreen = true
+                        }
+                    )
+                    MoreActionRow(
+                        icon = Icons.Default.Equalizer,
+                        title = "Audio Equalizer",
+                        onClick = {
+                            showMoreMenuSheet = false
+                            showEqualizerSheet = true
+                        }
+                    )
+                    MoreActionRow(
+                        icon = Icons.Default.PlaylistAdd,
+                        title = "Add to Playlist",
+                        onClick = {
+                            showMoreMenuSheet = false
+                            showAddToPlaylistSheet = true
+                        }
+                    )
+                    MoreActionRow(
+                        icon = Icons.Default.Album,
+                        title = "Go to Album",
+                        onClick = {
+                            showMoreMenuSheet = false
+                            onGoToAlbum(song.albumId)
+                        }
+                    )
+                    MoreActionRow(
+                        icon = Icons.Default.Person,
+                        title = "Go to Artist",
+                        onClick = {
+                            showMoreMenuSheet = false
+                            onGoToArtist(song.artistId)
+                        }
+                    )
+                    MoreActionRow(
+                        icon = Icons.Default.Info,
+                        title = "Audio Information",
+                        onClick = {
+                            showMoreMenuSheet = false
+                            showAudioInfoDialog = true
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+        }
+
+        // Add to Playlist Sheet
+        if (showAddToPlaylistSheet) {
+            AddToPlaylistSheet(
+                song = song,
+                playlistRepository = playlistRepository,
+                onDismiss = { showAddToPlaylistSheet = false }
+            )
+        }
+
+        // Audio Information Dialog (PRD Section 14.2)
+        if (showAudioInfoDialog) {
+            AudioInformationDialog(
+                song = song,
+                onDismiss = { showAudioInfoDialog = false }
+            )
+        }
+
         // Clear Queue Confirmation Dialog (PRD Section 6.1)
         if (showClearQueueDialog) {
             AlertDialog(
@@ -500,7 +606,7 @@ fun NowPlayingScreen(
             LyricsScreen(
                 song = song,
                 currentPositionMs = currentPositionMs,
-                lyrics = null, // Will parse local LRC if present
+                lyrics = null,
                 onSeek = { seekPosMs ->
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     viewModel.seekTo(seekPosMs)
@@ -508,5 +614,34 @@ fun NowPlayingScreen(
                 onDismiss = { showLyricsScreen = false }
             )
         }
+    }
+}
+
+@Composable
+private fun MoreActionRow(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AurelTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = AurelTheme.colors.accent,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(
+            text = title,
+            style = AurelTheme.typography.primaryContent,
+            color = AurelTheme.colors.primaryText
+        )
     }
 }

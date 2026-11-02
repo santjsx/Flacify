@@ -57,6 +57,28 @@ class SleepTimerManager @Inject constructor(
         }
     }
 
+    fun startTimerForEndOfTrack() {
+        cancelTimer()
+        val duration = playbackRepository.durationMs.value
+        val position = playbackRepository.currentPositionMs.value
+        val remainingSecs = ((duration - position).coerceAtLeast(0L) / 1000L).coerceAtLeast(1L)
+        totalDurationSeconds = remainingSecs
+        endTimestampUptimeMs = currentMonotonicMillis() + (remainingSecs * 1000L)
+
+        timerJob = scope.launch {
+            while (isActive) {
+                val remainingMs = endTimestampUptimeMs - currentMonotonicMillis()
+                if (remainingMs <= 0) {
+                    onTimerCompleted()
+                    break
+                }
+                val secs = (remainingMs / 1000L).coerceAtLeast(0L)
+                _timerState.value = SleepTimerState.Active(secs, totalDurationSeconds, stopAtEndOfTrack = true)
+                delay(500)
+            }
+        }
+    }
+
     fun cancelTimer() {
         timerJob?.cancel()
         timerJob = null

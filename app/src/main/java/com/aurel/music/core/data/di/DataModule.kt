@@ -1,5 +1,7 @@
 package com.aurel.music.core.data.di
 
+import com.aurel.music.core.data.repository.PlaylistRepository
+import com.aurel.music.core.data.repository.PlaylistRepositoryImpl
 import com.aurel.music.core.data.repository.SongRepository
 import com.aurel.music.core.data.repository.SongRepositoryImpl
 import com.aurel.music.core.data.repository.UserPreferencesRepository
@@ -19,6 +21,12 @@ abstract class DataModule {
     abstract fun bindSongRepository(
         impl: SongRepositoryImpl
     ): SongRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPlaylistRepository(
+        impl: PlaylistRepositoryImpl
+    ): PlaylistRepository
 
     @Binds
     @Singleton

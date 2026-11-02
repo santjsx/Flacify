@@ -1,5 +1,6 @@
 package com.aurel.music.feature.home
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -25,6 +26,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,11 +35,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,8 +55,10 @@ import com.aurel.music.core.ui.component.SongRow
 fun HomeScreen(
     viewModel: HomeViewModel,
     onNavigateToSearch: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val songCount by viewModel.songCount.collectAsStateWithLifecycle()
     val albumCount by viewModel.albumCount.collectAsStateWithLifecycle()
     val artistCount by viewModel.artistCount.collectAsStateWithLifecycle()
@@ -60,6 +67,21 @@ fun HomeScreen(
     val currentSong by viewModel.currentPlayingSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val scanStatus by viewModel.scanStatus.collectAsStateWithLifecycle()
+
+    // Scan feedback toast (PRD Section 15.1)
+    LaunchedEffect(scanStatus) {
+        when (val status = scanStatus) {
+            is ScanStatus.Completed -> {
+                val msg = if (status.addedCount > 0) {
+                    "Music library updated · ${status.addedCount} new tracks"
+                } else {
+                    "Your music library is up to date."
+                }
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -89,20 +111,37 @@ fun HomeScreen(
                     )
                 }
 
-                // Scan / Refresh Button
-                if (scanStatus is ScanStatus.Scanning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = AurelTheme.colors.accent,
-                        strokeWidth = 2.5.dp
-                    )
-                } else {
-                    IconButton(onClick = { viewModel.scanLibrary() }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onNavigateToSearch) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Scan library",
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search shortcut",
                             tint = AurelTheme.colors.primaryText
                         )
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings shortcut",
+                            tint = AurelTheme.colors.primaryText
+                        )
+                    }
+
+                    // Scan / Refresh Button
+                    if (scanStatus is ScanStatus.Scanning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = AurelTheme.colors.accent,
+                            strokeWidth = 2.5.dp
+                        )
+                    } else {
+                        IconButton(onClick = { viewModel.scanLibrary() }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Scan library",
+                                tint = AurelTheme.colors.primaryText
+                            )
+                        }
                     }
                 }
             }

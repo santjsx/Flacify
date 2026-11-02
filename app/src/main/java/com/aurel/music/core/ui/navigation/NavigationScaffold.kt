@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -30,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -39,17 +36,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurel.music.core.audio.equalizer.EqualizerController
 import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.data.repository.PlaybackRepository
+import com.aurel.music.core.data.repository.PlaylistRepository
+import com.aurel.music.core.data.repository.SongRepository
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.ui.component.MiniPlayer
 import com.aurel.music.feature.equalizer.EqualizerSheet
+import com.aurel.music.feature.favorites.FavoritesSheet
 import com.aurel.music.feature.home.HomeScreen
 import com.aurel.music.feature.home.HomeViewModel
 import com.aurel.music.feature.library.LibraryScreen
+import com.aurel.music.feature.library.LibraryTab
 import com.aurel.music.feature.library.LibraryViewModel
 import com.aurel.music.feature.more.MoreScreen
 import com.aurel.music.feature.more.MoreViewModel
 import com.aurel.music.feature.nowplaying.NowPlayingScreen
 import com.aurel.music.feature.nowplaying.NowPlayingViewModel
+import com.aurel.music.feature.playlists.PlaylistsSheet
 import com.aurel.music.feature.search.SearchScreen
 import com.aurel.music.feature.search.SearchViewModel
 import com.aurel.music.feature.timer.SleepTimerSheet
@@ -64,6 +66,8 @@ enum class NavigationDestination(val label: String, val icon: ImageVector) {
 @Composable
 fun NavigationScaffold(
     playbackRepository: PlaybackRepository,
+    songRepository: SongRepository,
+    playlistRepository: PlaylistRepository,
     sleepTimerManager: SleepTimerManager,
     equalizerController: EqualizerController,
     modifier: Modifier = Modifier
@@ -72,6 +76,8 @@ fun NavigationScaffold(
     var isNowPlayingOpen by remember { mutableStateOf(false) }
     var isMoreSleepTimerOpen by remember { mutableStateOf(false) }
     var isMoreEqualizerOpen by remember { mutableStateOf(false) }
+    var isFavoritesOpen by remember { mutableStateOf(false) }
+    var isPlaylistsOpen by remember { mutableStateOf(false) }
 
     val currentSong by playbackRepository.currentSong.collectAsStateWithLifecycle()
     val isPlaying by playbackRepository.isPlaying.collectAsStateWithLifecycle()
@@ -147,7 +153,8 @@ fun NavigationScaffold(
                 when (currentDestination) {
                     NavigationDestination.HOME -> HomeScreen(
                         viewModel = homeViewModel,
-                        onNavigateToSearch = { currentDestination = NavigationDestination.SEARCH }
+                        onNavigateToSearch = { currentDestination = NavigationDestination.SEARCH },
+                        onNavigateToSettings = { currentDestination = NavigationDestination.MORE }
                     )
                     NavigationDestination.LIBRARY -> LibraryScreen(
                         viewModel = libraryViewModel
@@ -159,7 +166,9 @@ fun NavigationScaffold(
                         viewModel = moreViewModel,
                         onRescanClick = { homeViewModel.scanLibrary() },
                         onEqualizerClick = { isMoreEqualizerOpen = true },
-                        onSleepTimerClick = { isMoreSleepTimerOpen = true }
+                        onSleepTimerClick = { isMoreSleepTimerOpen = true },
+                        onFavoritesClick = { isFavoritesOpen = true },
+                        onPlaylistsClick = { isPlaylistsOpen = true }
                     )
                 }
             }
@@ -175,7 +184,26 @@ fun NavigationScaffold(
                 viewModel = nowPlayingViewModel,
                 sleepTimerManager = sleepTimerManager,
                 equalizerController = equalizerController,
-                onDismiss = { isNowPlayingOpen = false }
+                playlistRepository = playlistRepository,
+                onDismiss = { isNowPlayingOpen = false },
+                onGoToAlbum = { albumId ->
+                    val album = libraryViewModel.albums.value.find { it.id == albumId }
+                    if (album != null) {
+                        libraryViewModel.selectTab(LibraryTab.ALBUMS)
+                        libraryViewModel.selectAlbum(album)
+                        currentDestination = NavigationDestination.LIBRARY
+                        isNowPlayingOpen = false
+                    }
+                },
+                onGoToArtist = { artistId ->
+                    val artist = libraryViewModel.artists.value.find { it.id == artistId }
+                    if (artist != null) {
+                        libraryViewModel.selectTab(LibraryTab.ARTISTS)
+                        libraryViewModel.selectArtist(artist)
+                        currentDestination = NavigationDestination.LIBRARY
+                        isNowPlayingOpen = false
+                    }
+                }
             )
         }
 
@@ -193,6 +221,23 @@ fun NavigationScaffold(
                 onDismiss = { isMoreEqualizerOpen = false }
             )
         }
+
+        // Favorites Sheet (PRD Section 11.2)
+        if (isFavoritesOpen) {
+            FavoritesSheet(
+                songRepository = songRepository,
+                playbackRepository = playbackRepository,
+                onDismiss = { isFavoritesOpen = false }
+            )
+        }
+
+        // Playlists Sheet (PRD Section 11.1)
+        if (isPlaylistsOpen) {
+            PlaylistsSheet(
+                playlistRepository = playlistRepository,
+                playbackRepository = playbackRepository,
+                onDismiss = { isPlaylistsOpen = false }
+            )
+        }
     }
 }
-

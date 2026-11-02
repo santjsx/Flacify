@@ -174,6 +174,53 @@ fun LibraryScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
+                    // Play All & Shuffle All Header (PRD Section 5.1)
+                    if (pagedSongs.itemCount > 0) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        val firstSong = pagedSongs[0]
+                                        if (firstSong != null) {
+                                            val currentItems = (0 until minOf(pagedSongs.itemCount, 100)).mapNotNull { pagedSongs[it] }
+                                            viewModel.playQueue(currentItems, 0)
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
+                                    shape = AurelTheme.shapes.small
+                                ) {
+                                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "Play All", color = AurelTheme.colors.primaryText)
+                                }
+
+                                Button(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        val currentItems = (0 until minOf(pagedSongs.itemCount, 100)).mapNotNull { pagedSongs[it] }.shuffled()
+                                        if (currentItems.isNotEmpty()) {
+                                            viewModel.playQueue(currentItems, 0)
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.surfaceVariant),
+                                    shape = AurelTheme.shapes.small
+                                ) {
+                                    Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "Shuffle", color = AurelTheme.colors.primaryText)
+                                }
+                            }
+                        }
+                    }
+
                     items(
                         count = pagedSongs.itemCount,
                         key = { index -> pagedSongs[index]?.id ?: index }
