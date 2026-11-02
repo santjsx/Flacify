@@ -509,7 +509,16 @@ fun MoreScreen(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(text = "Version ${state.version}", style = FlacifyTheme.typography.primaryContentBold, color = FlacifyTheme.colors.accent)
-                        Text(text = state.releaseNotes, color = FlacifyTheme.colors.secondaryText)
+                        val cleanedNotes = remember(state.releaseNotes) {
+                            formatReleaseNotes(state.releaseNotes)
+                        }
+                        if (cleanedNotes.isNotBlank()) {
+                            Text(
+                                text = cleanedNotes,
+                                color = FlacifyTheme.colors.secondaryText,
+                                style = FlacifyTheme.typography.bodyMedium
+                            )
+                        }
                         val sizeMb = "%.1f".format(state.sizeBytes / (1024.0 * 1024.0))
                         Text(text = "Download size: $sizeMb MB", style = FlacifyTheme.typography.metadata, color = FlacifyTheme.colors.tertiaryText)
                         if (!state.releasePageUrl.isNullOrBlank()) {
@@ -717,4 +726,23 @@ private fun PreferenceRow(
             modifier = Modifier.size(FlacifyTheme.dimensions.iconMedium)
         )
     }
+}
+
+
+private fun formatReleaseNotes(raw: String): String {
+    return raw.lineSequence()
+        .map { it.trim() }
+        .filter { line ->
+            line.isNotBlank() &&
+            !line.startsWith("## ") &&
+            !line.startsWith("### ") &&
+            !line.startsWith("---") &&
+            !line.contains("What's Changed", ignoreCase = true)
+        }
+        .map { line ->
+            line.replace(Regex("""\*\*(.*?)\*\*"""), "$1")
+                .replace("`", "")
+                .replace(Regex("""^[-*]\s*"""), "• ")
+        }
+        .joinToString("\n")
 }
