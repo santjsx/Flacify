@@ -65,7 +65,7 @@ enum class NavigationDestination(val label: String, val icon: () -> ImageVector)
     HOME("Home", { FlacifyIcons.Home }),
     LIBRARY("Library", { FlacifyIcons.Library }),
     SEARCH("Search", { FlacifyIcons.Search }),
-    MORE("More", { FlacifyIcons.More })
+    MORE("Settings", { FlacifyIcons.Settings })
 }
 
 @Composable

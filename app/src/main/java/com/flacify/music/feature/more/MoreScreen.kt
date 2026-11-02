@@ -88,7 +88,7 @@ fun MoreScreen(
         ) {
             Column {
                 Text(
-                    text = "More",
+                    text = "Settings",
                     style = FlacifyTheme.typography.appScreenTitle,
                     color = FlacifyTheme.colors.primaryText
                 )
