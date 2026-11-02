@@ -1,6 +1,9 @@
 package com.flacify.music.feature.lyrics
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,16 +18,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,28 +48,48 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.flacify.music.core.data.lyrics.Lyrics
 import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.model.Song
+import com.flacify.music.feature.nowplaying.LyricsUiState
+import kotlinx.coroutines.delay
 
 @Composable
 fun LyricsScreen(
     song: Song,
     currentPositionMs: Long,
-    lyrics: Lyrics?,
+    lyricsUiState: LyricsUiState,
     onSeek: (Long) -> Unit,
     onDismiss: () -> Unit,
+    onImportFile: (Uri) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
     var isUserScrolling by remember { mutableStateOf(false) }
+
+    val lrcPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            onImportFile(uri)
+        }
+    }
 
     // Intercept system Back gesture and 3-button back to dismiss lyrics
     BackHandler(enabled = true) {
         onDismiss()
     }
 
+    // Auto-reset user scrolling flag after 3.5 seconds of inactivity
+    LaunchedEffect(isUserScrolling) {
+        if (isUserScrolling) {
+            delay(3500)
+            isUserScrolling = false
+        }
+    }
+
+    val lyrics = (lyricsUiState as? LyricsUiState.Success)?.lyrics
     val activeIndex = lyrics?.findActiveLineIndex(currentPositionMs) ?: -1
 
     // Auto-scroll to center active line when not manually scrolling
@@ -81,7 +109,7 @@ fun LyricsScreen(
             .statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header: Song Info & Close Button
+            // Header: Song Info, Import Button & Close Button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,106 +132,238 @@ fun LyricsScreen(
                     )
                 }
 
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = FlacifyIcons.Close,
-                        contentDescription = "Close lyrics",
-                        tint = FlacifyTheme.colors.secondaryText,
-                        modifier = Modifier.size(FlacifyTheme.dimensions.iconRegular)
-                    )
-                }
-            }
-
-            if (lyrics == null || lyrics.lines.isEmpty()) {
-                // Empty State
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(FlacifyTheme.spacing.xxl),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
-                    ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { lrcPickerLauncher.launch("*/*") }) {
                         Icon(
                             imageVector = FlacifyIcons.Lyrics,
-                            contentDescription = null,
+                            contentDescription = "Import lyrics file",
                             tint = FlacifyTheme.colors.tertiaryText,
-                            modifier = Modifier.size(FlacifyTheme.dimensions.iconHuge)
+                            modifier = Modifier.size(FlacifyTheme.dimensions.iconRegular)
                         )
-                        Text(
-                            text = "No lyrics available.",
-                            style = FlacifyTheme.typography.heading2,
-                            color = FlacifyTheme.colors.primaryText
-                        )
-                        Text(
-                            text = "Add an .lrc file in the audio folder to enable karaoke sync.",
-                            style = FlacifyTheme.typography.bodyMedium,
-                            color = FlacifyTheme.colors.secondaryText,
-                            textAlign = TextAlign.Center
+                    }
+
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = FlacifyIcons.Close,
+                            contentDescription = "Close lyrics",
+                            tint = FlacifyTheme.colors.secondaryText,
+                            modifier = Modifier.size(FlacifyTheme.dimensions.iconRegular)
                         )
                     }
                 }
-            } else {
-                // Synchronized Lyrics View
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectDragGestures { _, _ ->
-                                isUserScrolling = true
-                            }
-                        },
-                    contentPadding = PaddingValues(top = 100.dp, bottom = 200.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    itemsIndexed(lyrics.lines) { index, line ->
-                        val isActive = index == activeIndex
-                        val color = if (isActive) {
-                            FlacifyTheme.colors.primaryText
-                        } else {
-                            FlacifyTheme.colors.tertiaryText.copy(alpha = 0.45f)
+            }
+
+            when (lyricsUiState) {
+                is LyricsUiState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .navigationBarsPadding(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(36.dp),
+                                color = FlacifyTheme.colors.accent,
+                                strokeWidth = 3.dp
+                            )
+                            Text(
+                                text = "Finding lyrics...",
+                                style = FlacifyTheme.typography.bodyMedium,
+                                color = FlacifyTheme.colors.secondaryText
+                            )
                         }
+                    }
+                }
 
-                        val fontSize = if (isActive) 24.sp else 20.sp
-                        val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                is LyricsUiState.Empty -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(FlacifyTheme.spacing.xxl)
+                            .navigationBarsPadding(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
+                        ) {
+                            Icon(
+                                imageVector = FlacifyIcons.Lyrics,
+                                contentDescription = null,
+                                tint = FlacifyTheme.colors.tertiaryText,
+                                modifier = Modifier.size(FlacifyTheme.dimensions.iconHuge)
+                            )
+                            Text(
+                                text = "No lyrics available",
+                                style = FlacifyTheme.typography.heading2,
+                                color = FlacifyTheme.colors.primaryText
+                            )
+                            Text(
+                                text = lyricsUiState.reason.ifBlank {
+                                    "Place an .lrc file in the audio folder or import one directly."
+                                },
+                                style = FlacifyTheme.typography.bodyMedium,
+                                color = FlacifyTheme.colors.secondaryText,
+                                textAlign = TextAlign.Center
+                            )
 
-                        Text(
-                            text = line.text,
-                            fontSize = fontSize,
-                            fontWeight = fontWeight,
-                            lineHeight = 32.sp,
-                            color = color,
-                            textAlign = TextAlign.Center,
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Button(
+                                onClick = { lrcPickerLauncher.launch("*/*") },
+                                colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
+                                shape = FlacifyTheme.shapes.pill
+                            ) {
+                                Text(
+                                    text = "Import .lrc / .txt",
+                                    color = FlacifyTheme.colors.primaryText,
+                                    style = FlacifyTheme.typography.primaryButton
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = onRetry,
+                                shape = FlacifyTheme.shapes.pill
+                            ) {
+                                Icon(
+                                    imageVector = FlacifyIcons.Refresh,
+                                    contentDescription = null,
+                                    tint = FlacifyTheme.colors.secondaryText,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Search Online Again",
+                                    color = FlacifyTheme.colors.secondaryText,
+                                    style = FlacifyTheme.typography.secondaryContent
+                                )
+                            }
+                        }
+                    }
+                }
+
+                is LyricsUiState.Success -> {
+                    if (lyricsUiState.isInstrumental) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 28.dp)
-                                .clickable {
-                                    if (lyrics.isSynchronized) {
-                                        onSeek(line.timestampMs)
-                                        isUserScrolling = false
+                                .fillMaxSize()
+                                .navigationBarsPadding(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
+                            ) {
+                                Icon(
+                                    imageVector = FlacifyIcons.MusicNote,
+                                    contentDescription = null,
+                                    tint = FlacifyTheme.colors.tertiaryText,
+                                    modifier = Modifier.size(FlacifyTheme.dimensions.iconHuge)
+                                )
+                                Text(
+                                    text = "Instrumental Track",
+                                    style = FlacifyTheme.typography.heading2,
+                                    color = FlacifyTheme.colors.primaryText
+                                )
+                                Text(
+                                    text = "This song has no vocal lyrics.",
+                                    style = FlacifyTheme.typography.bodyMedium,
+                                    color = FlacifyTheme.colors.secondaryText
+                                )
+                            }
+                        }
+                    } else if (lyricsUiState.lyrics.lines.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .navigationBarsPadding(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No lyrics found",
+                                style = FlacifyTheme.typography.heading2,
+                                color = FlacifyTheme.colors.secondaryText
+                            )
+                        }
+                    } else {
+                        // Render Lyrics (Synchronized or Unsynchronized)
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectDragGestures { _, _ ->
+                                        isUserScrolling = true
                                     }
+                                },
+                            contentPadding = PaddingValues(top = 80.dp, bottom = 180.dp),
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            itemsIndexed(lyricsUiState.lyrics.lines) { index, line ->
+                                val isActive = index == activeIndex
+                                val color = if (lyricsUiState.lyrics.isSynchronized) {
+                                    if (isActive) {
+                                        FlacifyTheme.colors.primaryText
+                                    } else {
+                                        FlacifyTheme.colors.tertiaryText.copy(alpha = 0.45f)
+                                    }
+                                } else {
+                                    FlacifyTheme.colors.primaryText
                                 }
-                                .graphicsLayer {
-                                    scaleX = if (isActive) 1.04f else 1.0f
-                                    scaleY = if (isActive) 1.04f else 1.0f
+
+                                val fontSize = if (lyricsUiState.lyrics.isSynchronized) {
+                                    if (isActive) 24.sp else 20.sp
+                                } else {
+                                    19.sp
                                 }
-                        )
+
+                                val fontWeight = if (isActive && lyricsUiState.lyrics.isSynchronized) {
+                                    FontWeight.Bold
+                                } else {
+                                    FontWeight.Medium
+                                }
+
+                                Text(
+                                    text = line.text,
+                                    fontSize = fontSize,
+                                    fontWeight = fontWeight,
+                                    lineHeight = 32.sp,
+                                    color = color,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 28.dp)
+                                        .clickable {
+                                            if (lyricsUiState.lyrics.isSynchronized) {
+                                                onSeek(line.timestampMs)
+                                                isUserScrolling = false
+                                            }
+                                        }
+                                        .graphicsLayer {
+                                            scaleX = if (isActive && lyricsUiState.lyrics.isSynchronized) 1.04f else 1.0f
+                                            scaleY = if (isActive && lyricsUiState.lyrics.isSynchronized) 1.04f else 1.0f
+                                        }
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // Floating "Resume Sync" pill when user scrolled away
+        // Floating "Resume Sync" pill when user manually scrolled away
         AnimatedVisibility(
-            visible = isUserScrolling,
+            visible = isUserScrolling && lyrics?.isSynchronized == true,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 24.dp)
         ) {
             Button(
                 onClick = { isUserScrolling = false },
@@ -227,4 +387,3 @@ fun LyricsScreen(
         }
     }
 }
-

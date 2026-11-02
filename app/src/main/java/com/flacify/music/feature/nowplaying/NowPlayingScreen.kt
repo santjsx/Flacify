@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -97,6 +98,7 @@ fun NowPlayingScreen(
     val shuffleMode by viewModel.shuffleMode.collectAsStateWithLifecycle()
     val queue by viewModel.queue.collectAsStateWithLifecycle()
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
+    val lyricsUiState by viewModel.lyricsUiState.collectAsStateWithLifecycle()
 
     val nextSong = remember(queue, currentSong, repeatMode) {
         val song = currentSong ?: return@remember null
@@ -585,10 +587,14 @@ fun NowPlayingScreen(
             }
         }
 
-        // Up Next Queue Bottom Sheet
+        // Up Next Queue Bottom Sheet (mid-screen 55% viewport height)
         if (showQueueSheet) {
             FlacifyGlassSheet(
-                onDismissRequest = { showQueueSheet = false }
+                onDismissRequest = { showQueueSheet = false },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.55f),
+                contentModifier = Modifier.fillMaxHeight()
             ) {
                 Row(
                     modifier = Modifier
@@ -617,38 +623,57 @@ fun NowPlayingScreen(
                     }
                 }
 
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    itemsIndexed(queue, key = { index, item -> "${item.id}_$index" }) { index, queueSong ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                SongRow(
-                                    song = queueSong,
-                                    isPlaying = song.id == queueSong.id && isPlaying,
+                if (queue.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Queue is empty",
+                            style = FlacifyTheme.typography.bodyMedium,
+                            color = FlacifyTheme.colors.secondaryText
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        itemsIndexed(queue, key = { index, item -> "${item.id}_$index" }) { index, queueSong ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SongRow(
+                                        song = queueSong,
+                                        isPlaying = song.id == queueSong.id && isPlaying,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.playQueueItem(queueSong)
+                                            showQueueSheet = false
+                                        },
+                                        onMoreClick = {}
+                                    )
+                                }
+
+                                IconButton(
                                     onClick = {
                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        viewModel.playQueueItem(queueSong)
-                                        showQueueSheet = false
+                                        viewModel.removeFromQueue(index)
                                     },
-                                    onMoreClick = {}
-                                )
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.removeFromQueue(index)
-                                },
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Icon(
-                                    imageVector = FlacifyIcons.Close,
-                                    contentDescription = "Remove from queue",
-                                    tint = FlacifyTheme.colors.tertiaryText,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                    modifier = Modifier.bounceClick()
+                                ) {
+                                    Icon(
+                                        imageVector = FlacifyIcons.Close,
+                                        contentDescription = "Remove from queue",
+                                        tint = FlacifyTheme.colors.tertiaryText,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -847,12 +872,18 @@ fun NowPlayingScreen(
             LyricsScreen(
                 song = song,
                 currentPositionMs = currentPositionMs,
-                lyrics = null,
+                lyricsUiState = lyricsUiState,
                 onSeek = { seekPosMs ->
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     viewModel.seekTo(seekPosMs)
                 },
-                onDismiss = { showLyricsScreen = false }
+                onDismiss = { showLyricsScreen = false },
+                onImportFile = { uri ->
+                    viewModel.importLyricsFile(uri)
+                },
+                onRetry = {
+                    viewModel.refreshLyrics()
+                }
             )
         }
     }

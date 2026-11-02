@@ -3,6 +3,7 @@ package com.flacify.music.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.flacify.music.core.database.FlacifyDatabase
+import com.flacify.music.core.database.dao.LyricsDao
 import com.flacify.music.core.database.dao.PlaylistDao
 import com.flacify.music.core.database.dao.SongDao
 import dagger.Module
@@ -28,12 +29,14 @@ object DatabaseModule {
         )
             .fallbackToDestructiveMigration()
             .build()
-    }
+        }
 
     @Provides
     fun provideSongDao(database: FlacifyDatabase): SongDao = database.songDao()
 
     @Provides
     fun providePlaylistDao(database: FlacifyDatabase): PlaylistDao = database.playlistDao()
-}
 
+    @Provides
+    fun provideLyricsDao(database: FlacifyDatabase): LyricsDao = database.lyricsDao()
+}

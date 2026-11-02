@@ -33,6 +33,7 @@ import com.flacify.music.core.designsystem.theme.FlacifyTheme
 fun FlacifyGlassSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -63,6 +64,7 @@ fun FlacifyGlassSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .then(contentModifier)
                     .padding(horizontal = FlacifyTheme.spacing.lg)
                     .padding(top = 12.dp, bottom = FlacifyTheme.spacing.md)
             ) {

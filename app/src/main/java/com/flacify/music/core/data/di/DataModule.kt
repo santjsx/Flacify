@@ -1,5 +1,7 @@
 package com.flacify.music.core.data.di
 
+import com.flacify.music.core.data.repository.LyricsRepository
+import com.flacify.music.core.data.repository.LyricsRepositoryImpl
 import com.flacify.music.core.data.repository.PlaylistRepository
 import com.flacify.music.core.data.repository.PlaylistRepositoryImpl
 import com.flacify.music.core.data.repository.SongRepository
@@ -33,5 +35,10 @@ abstract class DataModule {
     abstract fun bindUserPreferencesRepository(
         impl: UserPreferencesRepositoryImpl
     ): UserPreferencesRepository
-}
 
+    @Binds
+    @Singleton
+    abstract fun bindLyricsRepository(
+        impl: LyricsRepositoryImpl
+    ): LyricsRepository
+}

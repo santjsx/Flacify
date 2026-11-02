@@ -1,5 +1,6 @@
 package com.flacify.music.core.update.di
 
+import com.flacify.music.core.data.lyrics.LrclibService
 import com.flacify.music.core.update.GitHubUpdateService
 import dagger.Module
 import dagger.Provides
@@ -46,5 +47,16 @@ object NetworkModule {
             .build()
             .create(GitHubUpdateService::class.java)
     }
-}
 
+    @Provides
+    @Singleton
+    fun provideLrclibService(okHttpClient: OkHttpClient): LrclibService {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl("https://lrclib.net/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(LrclibService::class.java)
+    }
+}
