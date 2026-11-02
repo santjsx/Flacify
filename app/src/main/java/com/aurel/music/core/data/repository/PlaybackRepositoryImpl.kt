@@ -258,6 +258,15 @@ class PlaybackRepositoryImpl @Inject constructor(
         _currentPositionMs.value = 0L
     }
 
+    override fun updateFavoriteStatus(songId: Long, isFavorite: Boolean) {
+        if (_currentSong.value?.id == songId) {
+            _currentSong.value = _currentSong.value?.copy(isFavorite = isFavorite)
+        }
+        _queue.value = _queue.value.map {
+            if (it.id == songId) it.copy(isFavorite = isFavorite) else it
+        }
+    }
+
     private fun Song.toMediaItem(): MediaItem {
         val metadata = MediaMetadata.Builder()
             .setTitle(title)

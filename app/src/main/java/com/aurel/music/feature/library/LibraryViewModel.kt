@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.aurel.music.core.data.repository.PlaybackRepository
+import com.aurel.music.core.data.repository.PlaylistRepository
 import com.aurel.music.core.data.repository.SongRepository
 import com.aurel.music.core.model.Album
 import com.aurel.music.core.model.Artist
+import com.aurel.music.core.model.Playlist
 import com.aurel.music.core.model.Song
 import com.aurel.music.core.model.SortOption
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,11 +20,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class LibraryTab(val title: String) {
+    PLAYLISTS("Playlists"),
     SONGS("Songs"),
     ALBUMS("Albums"),
     ARTISTS("Artists")
@@ -31,7 +35,8 @@ enum class LibraryTab(val title: String) {
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val songRepository: SongRepository,
-    private val playbackRepository: PlaybackRepository
+    private val playbackRepository: PlaybackRepository,
+    private val playlistRepository: PlaylistRepository
 ) : ViewModel() {
 
     private val _selectedTab = MutableStateFlow(LibraryTab.SONGS)
@@ -55,6 +60,12 @@ class LibraryViewModel @Inject constructor(
     val artists: StateFlow<List<Artist>> = songRepository.getAllArtists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val playlists: StateFlow<List<Playlist>> = playlistRepository.getAllPlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val playlistCount = playlists.map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     private val _selectedAlbum = MutableStateFlow<Album?>(null)
     val selectedAlbum: StateFlow<Album?> = _selectedAlbum.asStateFlow()
 
@@ -71,6 +82,16 @@ class LibraryViewModel @Inject constructor(
     val selectedArtistSongs: StateFlow<List<Song>> = _selectedArtist
         .flatMapLatest { artist ->
             if (artist != null) songRepository.getSongsByArtist(artist.id)
+            else flowOf(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedPlaylist = MutableStateFlow<Playlist?>(null)
+    val selectedPlaylist: StateFlow<Playlist?> = _selectedPlaylist.asStateFlow()
+
+    val selectedPlaylistSongs: StateFlow<List<Song>> = _selectedPlaylist
+        .flatMapLatest { playlist ->
+            if (playlist != null) playlistRepository.getSongsForPlaylist(playlist.id)
             else flowOf(emptyList())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -100,6 +121,39 @@ class LibraryViewModel @Inject constructor(
         _selectedArtist.value = artist
     }
 
+    fun selectPlaylist(playlist: Playlist?) {
+        _selectedPlaylist.value = playlist
+    }
+
+    fun createPlaylist(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            playlistRepository.createPlaylist(trimmed)
+        }
+    }
+
+    fun deletePlaylist(playlistId: Long) {
+        viewModelScope.launch {
+            playlistRepository.deletePlaylist(playlistId)
+            if (_selectedPlaylist.value?.id == playlistId) {
+                _selectedPlaylist.value = null
+            }
+        }
+    }
+
+    fun removeSongFromPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch {
+            playlistRepository.removeSongFromPlaylist(playlistId, songId)
+        }
+    }
+
+    fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch {
+            playlistRepository.addSongToPlaylist(playlistId, songId)
+        }
+    }
+
     fun playSong(song: Song) {
         playbackRepository.playSong(song)
     }
@@ -112,8 +166,24 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun toggleFavorite(song: Song) {
+        val newFav = !song.isFavorite
+        playbackRepository.updateFavoriteStatus(song.id, newFav)
         viewModelScope.launch {
-            songRepository.setFavorite(song.id, !song.isFavorite)
+            songRepository.setFavorite(song.id, newFav)
+        }
+    }
+
+    fun playNext(song: Song) {
+        val currentQueue = playbackRepository.queue.value.toMutableList()
+        val current = playbackRepository.currentSong.value
+        val currentIndex = if (current != null) currentQueue.indexOfFirst { it.id == current.id } else -1
+        if (currentIndex >= 0 && currentIndex < currentQueue.size) {
+            currentQueue.add(currentIndex + 1, song)
+        } else {
+            currentQueue.add(song)
+        }
+        if (current == null) {
+            playbackRepository.playSong(song, currentQueue)
         }
     }
 }

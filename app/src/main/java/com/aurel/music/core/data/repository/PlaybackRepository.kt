@@ -28,5 +28,6 @@ interface PlaybackRepository {
     fun removeFromQueue(index: Int)
     fun moveQueueItem(fromIndex: Int, toIndex: Int)
     fun clearQueue()
+    fun updateFavoriteStatus(songId: Long, isFavorite: Boolean)
 }
 

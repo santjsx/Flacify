@@ -6,6 +6,11 @@ import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.data.repository.SongRepository
 import com.aurel.music.core.model.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,6 +27,17 @@ class NowPlayingViewModel @Inject constructor(
     val repeatMode = playbackRepository.repeatMode
     val shuffleMode = playbackRepository.shuffleMode
     val queue = playbackRepository.queue
+
+    // Reactive single source of truth for favorite status of current track
+    val isFavorite: StateFlow<Boolean> = playbackRepository.currentSong
+        .flatMapLatest { song ->
+            if (song != null) {
+                songRepository.isFavoriteFlow(song.id)
+            } else {
+                flowOf(false)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun togglePlayPause() {
         if (playbackRepository.isPlaying.value) {
@@ -51,9 +67,18 @@ class NowPlayingViewModel @Inject constructor(
         playbackRepository.toggleShuffleMode()
     }
 
-    fun toggleFavorite(song: Song) {
+    fun toggleFavorite(song: Song? = currentSong.value) {
+        val target = song ?: currentSong.value ?: return
+        val newFav = if (target.id == currentSong.value?.id) {
+            !isFavorite.value
+        } else {
+            !target.isFavorite
+        }
+        // 1. Immediately update in-memory state for instant feedback
+        playbackRepository.updateFavoriteStatus(target.id, newFav)
+        // 2. Persist to Room database asynchronously
         viewModelScope.launch {
-            songRepository.setFavorite(song.id, !song.isFavorite)
+            songRepository.setFavorite(target.id, newFav)
         }
     }
 

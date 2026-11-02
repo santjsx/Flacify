@@ -88,6 +88,7 @@ fun NowPlayingScreen(
     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
     val shuffleMode by viewModel.shuffleMode.collectAsStateWithLifecycle()
     val queue by viewModel.queue.collectAsStateWithLifecycle()
+    val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
 
     var showQueueSheet by remember { mutableStateOf(false) }
     var showClearQueueDialog by remember { mutableStateOf(false) }
@@ -278,9 +279,9 @@ fun NowPlayingScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = if (song.isFavorite) AurelIcons.HeartFilled else AurelIcons.HeartOutline,
-                        contentDescription = if (song.isFavorite) "Remove ${song.title} from favorites" else "Add ${song.title} to favorites",
-                        tint = if (song.isFavorite) AurelTheme.colors.accent else AurelTheme.colors.secondaryText,
+                        imageVector = if (isFavorite) AurelIcons.HeartFilled else AurelIcons.HeartOutline,
+                        contentDescription = if (isFavorite) "Remove ${song.title} from favorites" else "Add ${song.title} to favorites",
+                        tint = if (isFavorite) AurelTheme.colors.accent else AurelTheme.colors.secondaryText,
                         modifier = Modifier.size(26.dp)
                     )
                 }
@@ -406,12 +407,12 @@ fun NowPlayingScreen(
                 IconButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showSleepTimerSheet = true
+                        showLyricsScreen = true
                     }
                 ) {
                     Icon(
-                        imageVector = AurelIcons.SleepTimer,
-                        contentDescription = "Sleep timer",
+                        imageVector = AurelIcons.Lyrics,
+                        contentDescription = "Synchronized lyrics",
                         tint = AurelTheme.colors.secondaryText
                     )
                 }
@@ -528,6 +529,14 @@ fun NowPlayingScreen(
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
+                    MoreActionRow(
+                        icon = if (isFavorite) AurelIcons.HeartFilled else AurelIcons.HeartOutline,
+                        title = if (isFavorite) "Favorited" else "Add to Favorites",
+                        iconTint = if (isFavorite) AurelTheme.colors.accent else AurelTheme.colors.secondaryText,
+                        onClick = {
+                            viewModel.toggleFavorite(song)
+                        }
+                    )
                     MoreActionRow(
                         icon = AurelIcons.Lyrics,
                         title = "Synchronized Lyrics",
@@ -661,6 +670,7 @@ fun NowPlayingScreen(
 private fun MoreActionRow(
     icon: ImageVector,
     title: String,
+    iconTint: androidx.compose.ui.graphics.Color = AurelTheme.colors.accent,
     onClick: () -> Unit
 ) {
     Row(
@@ -674,7 +684,7 @@ private fun MoreActionRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = AurelTheme.colors.accent,
+            tint = iconTint,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(14.dp))

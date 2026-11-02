@@ -26,14 +26,14 @@ class PlaylistRepositoryImpl @Inject constructor(
 ) : PlaylistRepository {
 
     override fun getAllPlaylists(): Flow<List<Playlist>> {
-        return playlistDao.getAllPlaylists().map { entities ->
-            entities.map { entity ->
+        return playlistDao.getAllPlaylistsWithCount().map { list ->
+            list.map { item ->
                 Playlist(
-                    id = entity.id,
-                    name = entity.name,
-                    trackCount = 0, // dynamic from queries
-                    createdAt = entity.createdAt,
-                    updatedAt = entity.updatedAt
+                    id = item.id,
+                    name = item.name,
+                    trackCount = item.trackCount,
+                    createdAt = item.createdAt,
+                    updatedAt = item.updatedAt
                 )
             }
         }

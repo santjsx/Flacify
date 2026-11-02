@@ -46,6 +46,13 @@ data class ArtistEntityProjection(
     )
 }
 
+data class UserSongMetadata(
+    val id: Long,
+    @ColumnInfo(name = "is_favorite") val isFavorite: Boolean,
+    @ColumnInfo(name = "play_count") val playCount: Int,
+    @ColumnInfo(name = "last_played_timestamp") val lastPlayedTimestamp: Long
+)
+
 @Dao
 interface SongDao {
 
@@ -126,6 +133,9 @@ interface SongDao {
     @Query("UPDATE songs SET is_favorite = :isFavorite WHERE id = :songId")
     suspend fun setFavorite(songId: Long, isFavorite: Boolean)
 
+    @Query("SELECT is_favorite FROM songs WHERE id = :songId")
+    fun isFavoriteFlow(songId: Long): Flow<Boolean?>
+
     // Play count tracker
     @Query("UPDATE songs SET play_count = play_count + 1, last_played_timestamp = :timestamp WHERE id = :songId")
     suspend fun incrementPlayCount(songId: Long, timestamp: Long)
@@ -144,6 +154,9 @@ interface SongDao {
     // Incremental Scanner operations
     @Query("SELECT id FROM songs")
     suspend fun getAllSongIds(): List<Long>
+
+    @Query("SELECT id, is_favorite, play_count, last_played_timestamp FROM songs")
+    suspend fun getAllUserMetadata(): List<UserSongMetadata>
 
     @Upsert
     suspend fun upsertSongs(songs: List<SongEntity>)

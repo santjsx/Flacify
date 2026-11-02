@@ -63,6 +63,7 @@ class MediaStoreScanner @Inject constructor(
             val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
 
             val existingIds = songDao.getAllSongIds().toHashSet()
+            val existingMetadataMap = songDao.getAllUserMetadata().associateBy { it.id }
             val discoveredIds = hashSetOf<Long>()
             val discoveredSongs = mutableListOf<SongEntity>()
 
@@ -98,6 +99,7 @@ class MediaStoreScanner @Inject constructor(
                     val rawTrack = cursor.getInt(trackCol)
                     val trackNumber = if (rawTrack >= 1000) rawTrack % 1000 else rawTrack
                     val discNumber = if (rawTrack >= 1000) rawTrack / 1000 else 1
+                    val existingMeta = existingMetadataMap[id]
 
                     val song = SongEntity(
                         id = id,
@@ -114,7 +116,10 @@ class MediaStoreScanner @Inject constructor(
                         dateAdded = cursor.getLong(dateAddedCol),
                         dateModified = cursor.getLong(dateModifiedCol),
                         fileSize = cursor.getLong(sizeCol),
-                        mimeType = cursor.getString(mimeCol) ?: ""
+                        mimeType = cursor.getString(mimeCol) ?: "",
+                        playCount = existingMeta?.playCount ?: 0,
+                        lastPlayedTimestamp = existingMeta?.lastPlayedTimestamp ?: 0L,
+                        isFavorite = existingMeta?.isFavorite ?: false
                     )
                     discoveredSongs.add(song)
                     processed++

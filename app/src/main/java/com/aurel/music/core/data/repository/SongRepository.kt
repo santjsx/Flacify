@@ -29,6 +29,7 @@ interface SongRepository {
     fun getRecentlyAddedSongs(): Flow<List<Song>>
     fun getMostPlayedSongs(): Flow<List<Song>>
     fun getFavoriteSongs(): Flow<List<Song>>
+    fun isFavoriteFlow(songId: Long): Flow<Boolean>
     suspend fun setFavorite(songId: Long, isFavorite: Boolean)
     suspend fun recordPlayback(songId: Long)
     suspend fun searchSongs(query: String): List<Song>
@@ -92,6 +93,9 @@ class SongRepositoryImpl @Inject constructor(
 
     override fun getFavoriteSongs(): Flow<List<Song>> =
         songDao.getFavoriteSongs().map { list -> list.map { it.toDomain() } }
+
+    override fun isFavoriteFlow(songId: Long): Flow<Boolean> =
+        songDao.isFavoriteFlow(songId).map { it ?: false }
 
     override suspend fun setFavorite(songId: Long, isFavorite: Boolean) {
         songDao.setFavorite(songId, isFavorite)

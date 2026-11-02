@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -29,7 +30,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,9 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,6 +56,7 @@ import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Album
 import com.aurel.music.core.model.Artist
+import com.aurel.music.core.model.Playlist
 import com.aurel.music.core.model.Song
 import com.aurel.music.core.model.SortOption
 import com.aurel.music.core.ui.component.SongRow
@@ -67,8 +73,12 @@ fun LibraryScreen(
     val songCount by viewModel.songCount.collectAsStateWithLifecycle()
     val albumCount by viewModel.albumCount.collectAsStateWithLifecycle()
     val artistCount by viewModel.artistCount.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val playlistCount by viewModel.playlistCount.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val artists by viewModel.artists.collectAsStateWithLifecycle()
+    val selectedPlaylist by viewModel.selectedPlaylist.collectAsStateWithLifecycle()
+    val selectedPlaylistSongs by viewModel.selectedPlaylistSongs.collectAsStateWithLifecycle()
     val selectedAlbum by viewModel.selectedAlbum.collectAsStateWithLifecycle()
     val selectedAlbumSongs by viewModel.selectedAlbumSongs.collectAsStateWithLifecycle()
     val selectedArtist by viewModel.selectedArtist.collectAsStateWithLifecycle()
@@ -78,10 +88,20 @@ fun LibraryScreen(
     val pagedSongs = viewModel.pagedSongs.collectAsLazyPagingItems()
 
     var isSortMenuExpanded by remember { mutableStateOf(false) }
+    var showNewPlaylistDialog by remember { mutableStateOf(false) }
+    var newPlaylistName by remember { mutableStateOf("") }
+    var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
+    var showAddToPlaylistSong by remember { mutableStateOf<Song?>(null) }
+    var showDeletePlaylistConfirm by remember { mutableStateOf(false) }
 
-    // Intercept system Back when viewing Albums or Artists tab to return to Songs tab first
-    BackHandler(enabled = selectedTab != LibraryTab.SONGS && selectedAlbum == null && selectedArtist == null) {
-        viewModel.selectTab(LibraryTab.SONGS)
+    // Intercept system Back to dismiss any open sub-views or return to Songs tab
+    BackHandler(enabled = selectedPlaylist != null || selectedAlbum != null || selectedArtist != null || selectedTab != LibraryTab.SONGS) {
+        when {
+            selectedPlaylist != null -> viewModel.selectPlaylist(null)
+            selectedAlbum != null -> viewModel.selectAlbum(null)
+            selectedArtist != null -> viewModel.selectArtist(null)
+            selectedTab != LibraryTab.SONGS -> viewModel.selectTab(LibraryTab.SONGS)
+        }
     }
 
     Column(
@@ -105,6 +125,7 @@ fun LibraryScreen(
                 )
                 Text(
                     text = when (selectedTab) {
+                        LibraryTab.PLAYLISTS -> "$playlistCount Playlists"
                         LibraryTab.SONGS -> "$songCount Songs"
                         LibraryTab.ALBUMS -> "$albumCount Albums"
                         LibraryTab.ARTISTS -> "$artistCount Artists"
@@ -114,47 +135,69 @@ fun LibraryScreen(
                 )
             }
 
-            // Sort Selector Button (active on Songs tab)
-            if (selectedTab == LibraryTab.SONGS) {
-                Box {
+            // Top action button (Add for Playlists, Sort for Songs)
+            when (selectedTab) {
+                LibraryTab.PLAYLISTS -> {
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            isSortMenuExpanded = true
+                            newPlaylistName = ""
+                            showNewPlaylistDialog = true
                         }
                     ) {
                         Icon(
-                            imageVector = AurelIcons.Sort,
-                            contentDescription = "Sort library by ${sortOption.displayName}",
-                            tint = AurelTheme.colors.primaryText
+                            imageVector = AurelIcons.Add,
+                            contentDescription = "New Playlist",
+                            tint = AurelTheme.colors.accent,
+                            modifier = Modifier.size(26.dp)
                         )
                     }
-
-                    DropdownMenu(
-                        expanded = isSortMenuExpanded,
-                        onDismissRequest = { isSortMenuExpanded = false }
-                    ) {
-                        SortOption.entries.forEach { option ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = option.displayName,
-                                        color = if (option == sortOption) AurelTheme.colors.accent else AurelTheme.colors.primaryText
-                                    )
-                                },
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.selectSortOption(option)
-                                    isSortMenuExpanded = false
-                                }
+                }
+                LibraryTab.SONGS -> {
+                    Box {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isSortMenuExpanded = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = AurelIcons.Sort,
+                                contentDescription = "Sort library by ${sortOption.displayName}",
+                                tint = AurelTheme.colors.primaryText
                             )
                         }
+
+                        DropdownMenu(
+                            expanded = isSortMenuExpanded,
+                            onDismissRequest = { isSortMenuExpanded = false }
+                        ) {
+                            SortOption.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = option.displayName,
+                                            color = if (option == sortOption) AurelTheme.colors.accent else AurelTheme.colors.primaryText
+                                        )
+                                    },
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        viewModel.selectSortOption(option)
+                                        isSortMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
+                }
+                else -> {
+                    // Spacer for albums and artists
+                    Spacer(modifier = Modifier.size(48.dp))
                 }
             }
         }
 
-        // Segmented Control (Songs, Albums, Artists)
+        // Segmented Control (Playlists, Songs, Albums, Artists)
         SegmentedTabBar(
             selectedTab = selectedTab,
             onTabSelected = {
@@ -168,6 +211,79 @@ fun LibraryScreen(
 
         // Content Area by Tab
         when (selectedTab) {
+            LibraryTab.PLAYLISTS -> {
+                if (playlists.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 32.dp, vertical = 64.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(AurelTheme.shapes.medium)
+                                    .background(AurelTheme.colors.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = AurelIcons.Queue,
+                                    contentDescription = null,
+                                    tint = AurelTheme.colors.accent,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "No Playlists Yet",
+                                style = AurelTheme.typography.sectionTitle,
+                                color = AurelTheme.colors.primaryText
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Create your first playlist to organize your favorite music.",
+                                style = AurelTheme.typography.secondaryContent,
+                                color = AurelTheme.colors.secondaryText,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Button(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    newPlaylistName = ""
+                                    showNewPlaylistDialog = true
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
+                                shape = AurelTheme.shapes.small
+                            ) {
+                                Icon(imageVector = AurelIcons.Add, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = "New Playlist", color = AurelTheme.colors.primaryText)
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 120.dp)
+                    ) {
+                        items(playlists, key = { it.id }) { playlist ->
+                            PlaylistRow(
+                                playlist = playlist,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    viewModel.selectPlaylist(playlist)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             LibraryTab.SONGS -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -233,7 +349,10 @@ fun LibraryScreen(
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     viewModel.playSong(song)
                                 },
-                                onMoreClick = { /* Option menu */ }
+                                onMoreClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedSongForOptions = song
+                                }
                             )
                         }
                     }
@@ -279,6 +398,80 @@ fun LibraryScreen(
         }
     }
 
+    // Playlist Detail Modal Sheet
+    if (selectedPlaylist != null) {
+        val currentSelectedPlaylist = selectedPlaylist!!
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.selectPlaylist(null) },
+            containerColor = AurelTheme.colors.surfaceElevated,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            PlaylistDetailContent(
+                playlist = currentSelectedPlaylist,
+                songs = selectedPlaylistSongs,
+                currentSong = currentSong,
+                isPlaying = isPlaying,
+                onPlayAll = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.playQueue(selectedPlaylistSongs, 0)
+                },
+                onShuffle = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.playQueue(selectedPlaylistSongs.shuffled(), 0)
+                },
+                onSongClick = { song ->
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    val index = selectedPlaylistSongs.indexOfFirst { it.id == song.id }
+                    viewModel.playQueue(selectedPlaylistSongs, if (index >= 0) index else 0)
+                },
+                onSongMoreClick = { song ->
+                    selectedSongForOptions = song
+                },
+                onDeleteClick = {
+                    showDeletePlaylistConfirm = true
+                }
+            )
+        }
+    }
+
+    // Delete Playlist Confirmation Dialog
+    if (showDeletePlaylistConfirm && selectedPlaylist != null) {
+        val targetPlaylist = selectedPlaylist!!
+        AlertDialog(
+            onDismissRequest = { showDeletePlaylistConfirm = false },
+            title = {
+                Text(
+                    text = "Delete Playlist",
+                    style = AurelTheme.typography.sectionTitle,
+                    color = AurelTheme.colors.primaryText
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${targetPlaylist.name}\"? This action cannot be undone.",
+                    style = AurelTheme.typography.primaryContent,
+                    color = AurelTheme.colors.secondaryText
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deletePlaylist(targetPlaylist.id)
+                        showDeletePlaylistConfirm = false
+                    }
+                ) {
+                    Text("Delete", color = AurelTheme.colors.accent)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeletePlaylistConfirm = false }) {
+                    Text("Cancel", color = AurelTheme.colors.primaryText)
+                }
+            },
+            containerColor = AurelTheme.colors.surfaceElevated
+        )
+    }
+
     // Album Detail Modal Sheet
     if (selectedAlbum != null) {
         ModalBottomSheet(
@@ -303,6 +496,9 @@ fun LibraryScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     val index = selectedAlbumSongs.indexOfFirst { it.id == song.id }
                     viewModel.playQueue(selectedAlbumSongs, if (index >= 0) index else 0)
+                },
+                onSongMoreClick = { song ->
+                    selectedSongForOptions = song
                 }
             )
         }
@@ -332,9 +528,283 @@ fun LibraryScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     val index = selectedArtistSongs.indexOfFirst { it.id == song.id }
                     viewModel.playQueue(selectedArtistSongs, if (index >= 0) index else 0)
+                },
+                onSongMoreClick = { song ->
+                    selectedSongForOptions = song
                 }
             )
         }
+    }
+
+    // Song Options Bottom Sheet
+    if (selectedSongForOptions != null) {
+        val song = selectedSongForOptions!!
+        ModalBottomSheet(
+            onDismissRequest = { selectedSongForOptions = null },
+            containerColor = AurelTheme.colors.surfaceElevated,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                // Header info
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(AurelTheme.shapes.small)
+                            .background(AurelTheme.colors.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = "content://media/external/audio/albumart/${song.albumId}",
+                            contentDescription = "${song.title} artwork",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        if (song.albumId <= 0L) {
+                            Icon(
+                                imageVector = AurelIcons.MusicNote,
+                                contentDescription = null,
+                                tint = AurelTheme.colors.tertiaryText,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = song.title,
+                            style = AurelTheme.typography.primaryContentBold,
+                            color = AurelTheme.colors.primaryText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${song.artistName} · ${song.albumTitle}",
+                            style = AurelTheme.typography.secondaryContent,
+                            color = AurelTheme.colors.secondaryText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Play Next
+                ActionSheetRow(
+                    icon = AurelIcons.Play,
+                    title = "Play Next",
+                    onClick = {
+                        viewModel.playNext(song)
+                        selectedSongForOptions = null
+                    }
+                )
+
+                // Favorite Toggle
+                ActionSheetRow(
+                    icon = if (song.isFavorite) AurelIcons.HeartFilled else AurelIcons.HeartOutline,
+                    title = if (song.isFavorite) "Remove from Favorites" else "Add to Favorites",
+                    iconTint = if (song.isFavorite) AurelTheme.colors.accent else AurelTheme.colors.secondaryText,
+                    onClick = {
+                        viewModel.toggleFavorite(song)
+                        selectedSongForOptions = null
+                    }
+                )
+
+                // Add to Playlist
+                ActionSheetRow(
+                    icon = AurelIcons.PlaylistAdd,
+                    title = "Add to Playlist...",
+                    onClick = {
+                        val currentSongTarget = song
+                        selectedSongForOptions = null
+                        showAddToPlaylistSong = currentSongTarget
+                    }
+                )
+
+                // If currently viewing a playlist, show option to remove from this playlist
+                if (selectedPlaylist != null) {
+                    val currentPlaylistId = selectedPlaylist!!.id
+                    ActionSheetRow(
+                        icon = AurelIcons.Delete,
+                        title = "Remove from Playlist",
+                        iconTint = AurelTheme.colors.accent,
+                        onClick = {
+                            viewModel.removeSongFromPlaylist(currentPlaylistId, song.id)
+                            selectedSongForOptions = null
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+
+    // Add To Playlist Sheet
+    if (showAddToPlaylistSong != null) {
+        val targetSong = showAddToPlaylistSong!!
+        ModalBottomSheet(
+            onDismissRequest = { showAddToPlaylistSong = null },
+            containerColor = AurelTheme.colors.surfaceElevated,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Add to Playlist",
+                        style = AurelTheme.typography.sectionTitle,
+                        color = AurelTheme.colors.primaryText
+                    )
+                    IconButton(onClick = { showAddToPlaylistSong = null }) {
+                        Icon(imageVector = AurelIcons.Close, contentDescription = "Close", tint = AurelTheme.colors.secondaryText)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Create New Playlist action
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(AurelTheme.shapes.small)
+                        .clickable {
+                            showAddToPlaylistSong = null
+                            newPlaylistName = ""
+                            showNewPlaylistDialog = true
+                        }
+                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = AurelIcons.Add,
+                        contentDescription = null,
+                        tint = AurelTheme.colors.accent,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Text(
+                        text = "New Playlist...",
+                        style = AurelTheme.typography.primaryContentBold,
+                        color = AurelTheme.colors.accent
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    items(playlists, key = { it.id }) { playlist ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(AurelTheme.shapes.small)
+                                .clickable {
+                                    viewModel.addSongToPlaylist(playlist.id, targetSong.id)
+                                    showAddToPlaylistSong = null
+                                }
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(AurelTheme.shapes.small)
+                                    .background(AurelTheme.colors.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = AurelIcons.Queue,
+                                    contentDescription = null,
+                                    tint = AurelTheme.colors.accent,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = playlist.name,
+                                    style = AurelTheme.typography.primaryContentBold,
+                                    color = AurelTheme.colors.primaryText
+                                )
+                                Text(
+                                    text = "${playlist.trackCount} ${if (playlist.trackCount == 1) "song" else "songs"}",
+                                    style = AurelTheme.typography.secondaryContent,
+                                    color = AurelTheme.colors.secondaryText
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+
+    // New Playlist Dialog
+    if (showNewPlaylistDialog) {
+        AlertDialog(
+            onDismissRequest = { showNewPlaylistDialog = false },
+            title = {
+                Text(
+                    text = "New Playlist",
+                    style = AurelTheme.typography.sectionTitle,
+                    color = AurelTheme.colors.primaryText
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter a title for this playlist.",
+                        style = AurelTheme.typography.secondaryContent,
+                        color = AurelTheme.colors.secondaryText
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = newPlaylistName,
+                        onValueChange = { newPlaylistName = it },
+                        placeholder = { Text("Playlist Name", color = AurelTheme.colors.tertiaryText) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newPlaylistName.isNotBlank()) {
+                            viewModel.createPlaylist(newPlaylistName.trim())
+                            showNewPlaylistDialog = false
+                            newPlaylistName = ""
+                        }
+                    },
+                    enabled = newPlaylistName.isNotBlank()
+                ) {
+                    Text("Create", color = AurelTheme.colors.accent)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNewPlaylistDialog = false }) {
+                    Text("Cancel", color = AurelTheme.colors.secondaryText)
+                }
+            },
+            containerColor = AurelTheme.colors.surfaceElevated
+        )
     }
 }
 
@@ -370,6 +840,227 @@ private fun SegmentedTabBar(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun PlaylistRow(
+    playlist: Playlist,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(AurelTheme.shapes.small)
+                .background(AurelTheme.colors.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = AurelIcons.Queue,
+                contentDescription = null,
+                tint = AurelTheme.colors.accent,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = playlist.name,
+                style = AurelTheme.typography.primaryContentBold,
+                color = AurelTheme.colors.primaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "${playlist.trackCount} ${if (playlist.trackCount == 1) "track" else "tracks"}",
+                style = AurelTheme.typography.secondaryContent,
+                color = AurelTheme.colors.secondaryText
+            )
+        }
+        Icon(
+            imageVector = AurelIcons.ChevronRight,
+            contentDescription = null,
+            tint = AurelTheme.colors.tertiaryText,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun PlaylistDetailContent(
+    playlist: Playlist,
+    songs: List<Song>,
+    currentSong: Song?,
+    isPlaying: Boolean,
+    onPlayAll: () -> Unit,
+    onShuffle: () -> Unit,
+    onSongClick: (Song) -> Unit,
+    onSongMoreClick: (Song) -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(bottom = 40.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(140.dp)
+                        .clip(AurelTheme.shapes.medium)
+                        .background(AurelTheme.colors.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = AurelIcons.Queue,
+                        contentDescription = null,
+                        tint = AurelTheme.colors.accent,
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = playlist.name,
+                    style = AurelTheme.typography.screenTitle,
+                    color = AurelTheme.colors.primaryText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${songs.size} ${if (songs.size == 1) "track" else "tracks"}",
+                    style = AurelTheme.typography.secondaryContent,
+                    color = AurelTheme.colors.secondaryText
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Play & Shuffle Action Buttons
+                if (songs.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = onPlayAll,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
+                            shape = AurelTheme.shapes.small
+                        ) {
+                            Icon(imageVector = AurelIcons.Play, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Play All", color = AurelTheme.colors.primaryText)
+                        }
+
+                        Button(
+                            onClick = onShuffle,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.surfaceVariant),
+                            shape = AurelTheme.shapes.small
+                        ) {
+                            Icon(imageVector = AurelIcons.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Shuffle", color = AurelTheme.colors.primaryText)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+
+        if (songs.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "This playlist is empty.\nAdd tracks using song options.",
+                        style = AurelTheme.typography.secondaryContent,
+                        color = AurelTheme.colors.secondaryText,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            items(songs, key = { it.id }) { song ->
+                SongRow(
+                    song = song,
+                    isPlaying = currentSong?.id == song.id && isPlaying,
+                    onClick = { onSongClick(song) },
+                    onMoreClick = { onSongMoreClick(song) }
+                )
+            }
+        }
+
+        // Delete Playlist action
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(AurelTheme.shapes.small)
+                    .clickable(onClick = onDeleteClick)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = AurelIcons.Delete,
+                    contentDescription = null,
+                    tint = AurelTheme.colors.accent,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Delete Playlist",
+                    style = AurelTheme.typography.primaryContentBold,
+                    color = AurelTheme.colors.accent
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionSheetRow(
+    icon: ImageVector,
+    title: String,
+    iconTint: androidx.compose.ui.graphics.Color = AurelTheme.colors.accent,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AurelTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(
+            text = title,
+            style = AurelTheme.typography.primaryContent,
+            color = AurelTheme.colors.primaryText
+        )
     }
 }
 
@@ -483,7 +1174,8 @@ private fun AlbumDetailContent(
     isPlaying: Boolean,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
-    onSongClick: (Song) -> Unit
+    onSongClick: (Song) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier
@@ -566,7 +1258,7 @@ private fun AlbumDetailContent(
                 song = song,
                 isPlaying = currentSong?.id == song.id && isPlaying,
                 onClick = { onSongClick(song) },
-                onMoreClick = {}
+                onMoreClick = { onSongMoreClick(song) }
             )
         }
     }
@@ -580,7 +1272,8 @@ private fun ArtistDetailContent(
     isPlaying: Boolean,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
-    onSongClick: (Song) -> Unit
+    onSongClick: (Song) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier
@@ -655,7 +1348,7 @@ private fun ArtistDetailContent(
                 song = song,
                 isPlaying = currentSong?.id == song.id && isPlaying,
                 onClick = { onSongClick(song) },
-                onMoreClick = {}
+                onMoreClick = { onSongMoreClick(song) }
             )
         }
     }
