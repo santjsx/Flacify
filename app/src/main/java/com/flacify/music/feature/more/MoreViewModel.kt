@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.Coil
+import com.flacify.music.BuildConfig
 import com.flacify.music.core.data.repository.SongRepository
 import com.flacify.music.core.data.repository.ThemeMode
 import com.flacify.music.core.data.repository.UserPreferencesRepository
@@ -25,10 +26,19 @@ sealed interface UpdateUiState {
         val version: String,
         val releaseNotes: String,
         val downloadUrl: String,
-        val sizeBytes: Long
+        val sizeBytes: Long,
+        val releasePageUrl: String? = null
+    ) : UpdateUiState
+    data class NoApkFound(
+        val version: String,
+        val releaseNotes: String,
+        val releasePageUrl: String? = null
     ) : UpdateUiState
     data class UpToDate(val version: String) : UpdateUiState
-    data class Error(val message: String) : UpdateUiState
+    data class Error(
+        val message: String,
+        val isNetworkError: Boolean = false
+    ) : UpdateUiState
 }
 
 @HiltViewModel
@@ -77,14 +87,25 @@ class MoreViewModel @Inject constructor(
                         version = result.latestVersion,
                         releaseNotes = result.releaseNotes,
                         downloadUrl = result.downloadUrl,
-                        sizeBytes = result.apkSizeBytes
+                        sizeBytes = result.apkSizeBytes,
+                        releasePageUrl = result.releasePageUrl
+                    )
+                }
+                is UpdateCheckResult.NoApkFound -> {
+                    _updateUiState.value = UpdateUiState.NoApkFound(
+                        version = result.latestVersion,
+                        releaseNotes = result.releaseNotes,
+                        releasePageUrl = result.releasePageUrl
                     )
                 }
                 is UpdateCheckResult.UpToDate -> {
-                    _updateUiState.value = UpdateUiState.UpToDate("1.0.0")
+                    _updateUiState.value = UpdateUiState.UpToDate(BuildConfig.VERSION_NAME)
                 }
                 is UpdateCheckResult.Error -> {
-                    _updateUiState.value = UpdateUiState.Error(result.message)
+                    _updateUiState.value = UpdateUiState.Error(
+                        message = result.message,
+                        isNetworkError = result.isNetworkError
+                    )
                 }
             }
         }
@@ -100,4 +121,3 @@ class MoreViewModel @Inject constructor(
         Coil.imageLoader(context).memoryCache?.clear()
     }
 }
-

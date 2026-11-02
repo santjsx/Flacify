@@ -15,10 +15,13 @@ android {
         applicationId = "com.flacify.music"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "GITHUB_OWNER", "\"santjsx\"")
+        buildConfigField("String", "GITHUB_REPO", "\"Flacify\"")
+
         vectorDrawables {
             useSupportLibrary = true
         }

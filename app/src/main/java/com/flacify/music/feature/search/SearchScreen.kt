@@ -54,7 +54,7 @@ fun SearchScreen(
     val results by viewModel.searchResults.collectAsStateWithLifecycle()
     val currentSong by viewModel.currentPlayingSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
-    val bottomClearance = rememberFloatingDockBottomClearance()
+    val bottomClearance = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null)
 
     var selectedFilter by remember { mutableStateOf(SearchFilter.ALL) }
 

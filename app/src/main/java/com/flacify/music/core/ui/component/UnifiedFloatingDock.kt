@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -134,9 +135,12 @@ private fun blend(base: Color, tint: Color): Color = Color(
  * Automatically accounts for 3-button navigation, gesture navigation, and display density.
  */
 @Composable
-fun rememberFloatingDockBottomClearance(): Dp {
+fun rememberFloatingDockBottomClearance(hasActiveTrack: Boolean = true): Dp {
     val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    return navBarsBottom + 172.dp
+    val dockHeight = if (hasActiveTrack) 136.dp else 60.dp
+    val verticalPadding = 16.dp
+    val safetyBuffer = 20.dp
+    return navBarsBottom + dockHeight + verticalPadding + safetyBuffer
 }
 
 /**
@@ -167,8 +171,8 @@ fun UnifiedFloatingDock(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Column(

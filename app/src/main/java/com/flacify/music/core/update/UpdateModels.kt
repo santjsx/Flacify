@@ -11,6 +11,10 @@ data class GitHubRelease(
     val name: String? = null,
     @SerialName("body")
     val releaseNotes: String? = null,
+    @SerialName("html_url")
+    val htmlUrl: String? = null,
+    @SerialName("published_at")
+    val publishedAt: String? = null,
     @SerialName("assets")
     val assets: List<GitHubAsset> = emptyList()
 )
@@ -31,8 +35,16 @@ sealed interface UpdateCheckResult {
         val latestVersion: String,
         val releaseNotes: String,
         val downloadUrl: String,
-        val apkSizeBytes: Long
+        val apkSizeBytes: Long,
+        val releasePageUrl: String? = null
     ) : UpdateCheckResult
-    data class Error(val message: String) : UpdateCheckResult
+    data class NoApkFound(
+        val latestVersion: String,
+        val releaseNotes: String,
+        val releasePageUrl: String? = null
+    ) : UpdateCheckResult
+    data class Error(
+        val message: String,
+        val isNetworkError: Boolean = false
+    ) : UpdateCheckResult
 }
-

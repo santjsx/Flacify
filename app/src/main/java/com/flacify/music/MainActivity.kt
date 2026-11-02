@@ -105,19 +105,14 @@ class MainActivity : ComponentActivity() {
             }
 
             FlacifyTheme(darkTheme = isDark) {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
-                ) { innerPadding ->
-                    NavigationScaffold(
-                        playbackRepository = playbackRepository,
-                        songRepository = songRepository,
-                        playlistRepository = playlistRepository,
-                        sleepTimerManager = sleepTimerManager,
-                        equalizerController = equalizerController,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                NavigationScaffold(
+                    playbackRepository = playbackRepository,
+                    songRepository = songRepository,
+                    playlistRepository = playlistRepository,
+                    sleepTimerManager = sleepTimerManager,
+                    equalizerController = equalizerController,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }

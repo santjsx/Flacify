@@ -68,7 +68,7 @@ fun HomeScreen(
     val currentSong by viewModel.currentPlayingSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val scanStatus by viewModel.scanStatus.collectAsStateWithLifecycle()
-    val bottomClearance = rememberFloatingDockBottomClearance()
+    val bottomClearance = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null)
 
     // Scan feedback toast (PRD Section 15.1)
     LaunchedEffect(scanStatus) {

@@ -1,5 +1,8 @@
 package com.flacify.music.feature.more
 
+import com.flacify.music.BuildConfig
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -52,6 +55,7 @@ fun MoreScreen(
     onSleepTimerClick: () -> Unit = {},
     onFavoritesClick: () -> Unit = {},
     onPlaylistsClick: () -> Unit = {},
+    hasActiveTrack: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -62,7 +66,7 @@ fun MoreScreen(
     val albumCount by viewModel.albumCount.collectAsStateWithLifecycle()
     val artistCount by viewModel.artistCount.collectAsStateWithLifecycle()
     val updateState by viewModel.updateUiState.collectAsStateWithLifecycle()
-    val bottomClearance = rememberFloatingDockBottomClearance()
+    val bottomClearance = rememberFloatingDockBottomClearance(hasActiveTrack = hasActiveTrack)
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showStorageDialog by remember { mutableStateOf(false) }
@@ -240,7 +244,7 @@ fun MoreScreen(
                 PreferenceRow(
                     icon = FlacifyIcons.Info,
                     title = "About FLACify",
-                    subtitle = "Version 1.0.0 · Offline-first player",
+                    subtitle = "Version ${BuildConfig.VERSION_NAME} · Offline-first player",
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showAboutDialog = true
@@ -364,7 +368,7 @@ fun MoreScreen(
             title = { Text(text = "FLACify Music Player", style = FlacifyTheme.typography.heading2, color = FlacifyTheme.colors.primaryText) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = "Version 1.0.0 (Build 100)", color = FlacifyTheme.colors.primaryText, style = FlacifyTheme.typography.primaryContentBold)
+                    Text(text = "Version ${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})", color = FlacifyTheme.colors.primaryText, style = FlacifyTheme.typography.primaryContentBold)
                     Text(text = "A minimalist, offline-first Android audio player engineered for clarity, fluidity, and audiophile-grade fidelity.", color = FlacifyTheme.colors.secondaryText)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(text = "Crafted by Santhosh Reddy — Lead Architect & Developer.", color = FlacifyTheme.colors.accent, style = FlacifyTheme.typography.primaryContentBold)
@@ -508,6 +512,25 @@ fun MoreScreen(
                         Text(text = state.releaseNotes, color = FlacifyTheme.colors.secondaryText)
                         val sizeMb = "%.1f".format(state.sizeBytes / (1024.0 * 1024.0))
                         Text(text = "Download size: $sizeMb MB", style = FlacifyTheme.typography.metadata, color = FlacifyTheme.colors.tertiaryText)
+                        if (!state.releasePageUrl.isNullOrBlank()) {
+                            Text(
+                                text = "View on GitHub",
+                                style = FlacifyTheme.typography.metadata,
+                                color = FlacifyTheme.colors.accent,
+                                modifier = Modifier
+                                    .clip(FlacifyTheme.shapes.small)
+                                    .clickable {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(state.releasePageUrl)).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {
+                                            Toast.makeText(context, "Unable to open browser", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                            )
+                        }
                     }
                 },
                 confirmButton = {
@@ -517,7 +540,15 @@ fun MoreScreen(
                             .background(FlacifyTheme.colors.accent)
                             .bounceClick {
                                 viewModel.dismissUpdateDialog()
-                                Toast.makeText(context, "Initiating update download...", Toast.LENGTH_SHORT).show()
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(state.downloadUrl)).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(intent)
+                                    Toast.makeText(context, "Opening download...", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Unable to open download URL", Toast.LENGTH_SHORT).show()
+                                }
                             }
                             .padding(horizontal = FlacifyTheme.spacing.md, vertical = 10.dp)
                     ) {
@@ -530,6 +561,52 @@ fun MoreScreen(
                         modifier = Modifier.bounceClick()
                     ) {
                         Text(text = "Later", color = FlacifyTheme.colors.primaryText)
+                    }
+                }
+            )
+        }
+
+        is UpdateUiState.NoApkFound -> {
+            FlacifyGlassDialog(
+                onDismissRequest = { viewModel.dismissUpdateDialog() },
+                title = { Text(text = "New Version Available", style = FlacifyTheme.typography.heading2, color = FlacifyTheme.colors.primaryText) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Version ${state.version} is published, but direct APK download is not yet attached.", color = FlacifyTheme.colors.secondaryText)
+                        if (state.releaseNotes.isNotBlank()) {
+                            Text(text = state.releaseNotes, color = FlacifyTheme.colors.tertiaryText)
+                        }
+                    }
+                },
+                confirmButton = {
+                    Box(
+                        modifier = Modifier
+                            .clip(FlacifyTheme.shapes.medium)
+                            .background(FlacifyTheme.colors.accent)
+                            .bounceClick {
+                                viewModel.dismissUpdateDialog()
+                                if (!state.releasePageUrl.isNullOrBlank()) {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(state.releasePageUrl)).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, "Unable to open browser", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            .padding(horizontal = FlacifyTheme.spacing.md, vertical = 10.dp)
+                    ) {
+                        Text(text = if (!state.releasePageUrl.isNullOrBlank()) "View Release" else "OK", color = androidx.compose.ui.graphics.Color.White, style = FlacifyTheme.typography.primaryButton)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissUpdateDialog() },
+                        modifier = Modifier.bounceClick()
+                    ) {
+                        Text(text = "Dismiss", color = FlacifyTheme.colors.primaryText)
                     }
                 }
             )

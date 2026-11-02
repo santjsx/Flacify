@@ -182,7 +182,8 @@ fun NavigationScaffold(
                         onEqualizerClick = { isMoreEqualizerOpen = true },
                         onSleepTimerClick = { isMoreSleepTimerOpen = true },
                         onFavoritesClick = { isFavoritesOpen = true },
-                        onPlaylistsClick = { isPlaylistsOpen = true }
+                        onPlaylistsClick = { isPlaylistsOpen = true },
+                        hasActiveTrack = (currentSong != null)
                     )
                 }
             }

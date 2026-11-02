@@ -91,7 +91,7 @@ fun LibraryScreen(
     val currentSong by viewModel.currentPlayingSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val pagedSongs = viewModel.pagedSongs.collectAsLazyPagingItems()
-    val bottomClearance = rememberFloatingDockBottomClearance()
+    val bottomClearance = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null)
 
     var isSortMenuExpanded by remember { mutableStateOf(false) }
     var isAlbumSortMenuExpanded by remember { mutableStateOf(false) }
@@ -309,7 +309,7 @@ fun LibraryScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = bottomClearance)
+                        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null))
                     ) {
                         items(playlists, key = { it.id }) { playlist ->
                             PlaylistRow(
@@ -381,7 +381,7 @@ fun LibraryScreen(
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = bottomClearance)
+                        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null))
                     ) {
 
                     items(
@@ -436,7 +436,7 @@ fun LibraryScreen(
             LibraryTab.ARTISTS -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = bottomClearance)
+                    contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null))
                 ) {
                     items(artists, key = { it.id }) { artist ->
                         ArtistRow(
@@ -967,7 +967,7 @@ private fun PlaylistDetailContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = FlacifyTheme.spacing.lg),
-        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance())
+        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null))
     ) {
         item {
             Column(
@@ -1247,7 +1247,7 @@ private fun AlbumDetailContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = FlacifyTheme.spacing.lg),
-        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance())
+        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null))
     ) {
         item {
             Column(
@@ -1353,7 +1353,7 @@ private fun ArtistDetailContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = FlacifyTheme.spacing.lg),
-        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance())
+        contentPadding = PaddingValues(bottom = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null))
     ) {
         item {
             Column(
