@@ -18,3 +18,4 @@ abstract class AudioModule {
         impl: PlaybackRepositoryImpl
     ): PlaybackRepository
 }
+

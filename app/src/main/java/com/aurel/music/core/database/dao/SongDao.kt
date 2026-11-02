@@ -85,3 +85,4 @@ interface SongDao {
     @Query("DELETE FROM songs")
     suspend fun clearAll()
 }
+

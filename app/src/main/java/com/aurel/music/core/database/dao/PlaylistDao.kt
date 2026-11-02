@@ -42,3 +42,4 @@ interface PlaylistDao {
     @Query("SELECT COUNT(*) FROM playlist_tracks WHERE playlist_id = :playlistId")
     fun getTrackCountForPlaylist(playlistId: Long): Flow<Int>
 }
+

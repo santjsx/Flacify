@@ -35,3 +35,4 @@ sealed interface UpdateCheckResult {
     ) : UpdateCheckResult
     data class Error(val message: String) : UpdateCheckResult
 }
+

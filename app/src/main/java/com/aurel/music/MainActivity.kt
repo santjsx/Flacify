@@ -14,6 +14,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.aurel.music.core.audio.equalizer.EqualizerController
+import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.data.repository.SongRepository
 import com.aurel.music.core.designsystem.theme.AurelTheme
@@ -31,6 +33,12 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var songRepository: SongRepository
+
+    @Inject
+    lateinit var sleepTimerManager: SleepTimerManager
+
+    @Inject
+    lateinit var equalizerController: EqualizerController
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -60,6 +68,8 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NavigationScaffold(
                         playbackRepository = playbackRepository,
+                        sleepTimerManager = sleepTimerManager,
+                        equalizerController = equalizerController,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

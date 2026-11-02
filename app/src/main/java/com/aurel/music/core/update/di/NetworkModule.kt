@@ -47,3 +47,4 @@ object NetworkModule {
             .create(GitHubUpdateService::class.java)
     }
 }
+

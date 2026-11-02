@@ -61,3 +61,4 @@ class NowPlayingViewModel @Inject constructor(
         playbackRepository.playSong(song, queue.value)
     }
 }
+

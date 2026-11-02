@@ -53,3 +53,4 @@ class FoundationSmokeTest {
         assertEquals(ShuffleMode.OFF, ShuffleMode.ON.toggle())
     }
 }
+

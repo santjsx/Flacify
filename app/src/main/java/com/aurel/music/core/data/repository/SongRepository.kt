@@ -89,3 +89,4 @@ class SongRepositoryImpl @Inject constructor(
         return scanner.scanLibrary()
     }
 }
+

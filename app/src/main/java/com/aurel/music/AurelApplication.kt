@@ -32,3 +32,4 @@ class AurelApplication : Application(), ImageLoaderFactory {
             .build()
     }
 }
+

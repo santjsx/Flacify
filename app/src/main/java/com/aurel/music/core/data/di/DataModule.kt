@@ -18,3 +18,4 @@ abstract class DataModule {
         impl: SongRepositoryImpl
     ): SongRepository
 }
+

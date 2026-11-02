@@ -41,3 +41,4 @@ data class AurelColors(
     val error: Color,
     val isDark: Boolean
 )
+

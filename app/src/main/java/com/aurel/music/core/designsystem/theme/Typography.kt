@@ -77,3 +77,4 @@ val MaterialTypographyBridge = Typography(
     bodyMedium = DefaultAurelTypography.secondaryContent,
     labelSmall = DefaultAurelTypography.metadata
 )
+

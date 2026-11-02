@@ -21,3 +21,4 @@ abstract class AurelDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
     abstract fun playlistDao(): PlaylistDao
 }
+

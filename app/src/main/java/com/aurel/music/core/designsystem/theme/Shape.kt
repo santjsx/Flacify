@@ -15,3 +15,4 @@ data class AurelShapes(
 )
 
 val DefaultAurelShapes = AurelShapes()
+

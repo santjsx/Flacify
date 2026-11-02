@@ -48,3 +48,4 @@ class QueueManagementTest {
         assertEquals("Song C", queue[1].title)
     }
 }
+

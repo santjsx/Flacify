@@ -47,3 +47,4 @@ class LrcParserTest {
         assertEquals(2, lyrics.findActiveLineIndex(35000L)) // After 30s -> Chorus
     }
 }
+

@@ -35,3 +35,4 @@ class GitHubUpdateManagerTest {
         assertFalse(updateManager.isNewerVersion("0.9.5", "1.0.0"))
     }
 }
+

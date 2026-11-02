@@ -12,11 +12,18 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.aurel.music.MainActivity
 import com.aurel.music.R
+import com.aurel.music.core.audio.equalizer.EqualizerController
 import com.aurel.music.core.audio.interruption.BecomingNoisyReceiver
 import com.aurel.music.core.audio.notification.AurelNotificationHelper
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @UnstableApi
+@AndroidEntryPoint
 class AurelPlaybackService : MediaSessionService() {
+
+    @Inject
+    lateinit var equalizerController: EqualizerController
 
     private var mediaSession: MediaSession? = null
     private var exoPlayer: ExoPlayer? = null
@@ -39,6 +46,9 @@ class AurelPlaybackService : MediaSessionService() {
             .build()
 
         exoPlayer = player
+
+        // Bind active audio session to Equalizer
+        equalizerController.bindAudioSession(player.audioSessionId)
 
         val sessionActivityIntent = PendingIntent.getActivity(
             this,
@@ -87,3 +97,4 @@ class AurelPlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 }
+

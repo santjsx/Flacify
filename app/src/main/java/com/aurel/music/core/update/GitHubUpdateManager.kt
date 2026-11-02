@@ -55,3 +55,4 @@ class GitHubUpdateManager @Inject constructor(
         return false
     }
 }
+

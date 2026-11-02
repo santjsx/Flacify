@@ -36,9 +36,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aurel.music.core.audio.equalizer.EqualizerController
+import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.ui.component.MiniPlayer
+import com.aurel.music.feature.equalizer.EqualizerSheet
 import com.aurel.music.feature.home.HomeScreen
 import com.aurel.music.feature.home.HomeViewModel
 import com.aurel.music.feature.library.LibraryScreen
@@ -48,6 +51,7 @@ import com.aurel.music.feature.nowplaying.NowPlayingScreen
 import com.aurel.music.feature.nowplaying.NowPlayingViewModel
 import com.aurel.music.feature.search.SearchScreen
 import com.aurel.music.feature.search.SearchViewModel
+import com.aurel.music.feature.timer.SleepTimerSheet
 
 enum class NavigationDestination(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Default.Home),
@@ -59,10 +63,14 @@ enum class NavigationDestination(val label: String, val icon: ImageVector) {
 @Composable
 fun NavigationScaffold(
     playbackRepository: PlaybackRepository,
+    sleepTimerManager: SleepTimerManager,
+    equalizerController: EqualizerController,
     modifier: Modifier = Modifier
 ) {
     var currentDestination by remember { mutableStateOf(NavigationDestination.HOME) }
     var isNowPlayingOpen by remember { mutableStateOf(false) }
+    var isMoreSleepTimerOpen by remember { mutableStateOf(false) }
+    var isMoreEqualizerOpen by remember { mutableStateOf(false) }
 
     val currentSong by playbackRepository.currentSong.collectAsStateWithLifecycle()
     val isPlaying by playbackRepository.isPlaying.collectAsStateWithLifecycle()
@@ -146,7 +154,9 @@ fun NavigationScaffold(
                         viewModel = searchViewModel
                     )
                     NavigationDestination.MORE -> MoreScreen(
-                        onRescanClick = { homeViewModel.scanLibrary() }
+                        onRescanClick = { homeViewModel.scanLibrary() },
+                        onEqualizerClick = { isMoreEqualizerOpen = true },
+                        onSleepTimerClick = { isMoreSleepTimerOpen = true }
                     )
                 }
             }
@@ -160,8 +170,26 @@ fun NavigationScaffold(
         ) {
             NowPlayingScreen(
                 viewModel = nowPlayingViewModel,
+                sleepTimerManager = sleepTimerManager,
+                equalizerController = equalizerController,
                 onDismiss = { isNowPlayingOpen = false }
+            )
+        }
+
+        // Sheets triggered from More Screen
+        if (isMoreSleepTimerOpen) {
+            SleepTimerSheet(
+                timerManager = sleepTimerManager,
+                onDismiss = { isMoreSleepTimerOpen = false }
+            )
+        }
+
+        if (isMoreEqualizerOpen) {
+            EqualizerSheet(
+                equalizerController = equalizerController,
+                onDismiss = { isMoreEqualizerOpen = false }
             )
         }
     }
 }
+

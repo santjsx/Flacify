@@ -11,3 +11,4 @@ interface GitHubUpdateService {
         @Path("repo") repo: String
     ): GitHubRelease
 }
+

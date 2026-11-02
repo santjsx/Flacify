@@ -51,3 +51,4 @@ class SearchViewModelTest {
         assertEquals("", viewModel.searchQuery.value)
     }
 }
+

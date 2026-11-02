@@ -1,6 +1,5 @@
 package com.aurel.music.core.audio.timer
 
-import android.os.SystemClock
 import com.aurel.music.core.data.repository.PlaybackRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,15 +35,17 @@ class SleepTimerManager @Inject constructor(
     private val _timerState = MutableStateFlow<SleepTimerState>(SleepTimerState.Inactive)
     val timerState: StateFlow<SleepTimerState> = _timerState.asStateFlow()
 
+    private fun currentMonotonicMillis(): Long = System.nanoTime() / 1_000_000L
+
     fun startTimer(durationMinutes: Int) {
         cancelTimer()
         val totalSecs = durationMinutes * 60L
         totalDurationSeconds = totalSecs
-        endTimestampUptimeMs = SystemClock.uptimeMillis() + (totalSecs * 1000L)
+        endTimestampUptimeMs = currentMonotonicMillis() + (totalSecs * 1000L)
 
         timerJob = scope.launch {
             while (isActive) {
-                val remainingMs = endTimestampUptimeMs - SystemClock.uptimeMillis()
+                val remainingMs = endTimestampUptimeMs - currentMonotonicMillis()
                 if (remainingMs <= 0) {
                     onTimerCompleted()
                     break
@@ -77,3 +78,4 @@ class SleepTimerManager @Inject constructor(
         _timerState.value = SleepTimerState.Inactive
     }
 }
+

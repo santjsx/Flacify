@@ -38,6 +38,8 @@ import com.aurel.music.core.designsystem.theme.AurelTheme
 @Composable
 fun MoreScreen(
     onRescanClick: () -> Unit,
+    onEqualizerClick: () -> Unit = {},
+    onSleepTimerClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -82,13 +84,13 @@ fun MoreScreen(
                     icon = Icons.Default.Equalizer,
                     title = "Equalizer",
                     subtitle = "Presets and custom audio bands",
-                    onClick = {}
+                    onClick = onEqualizerClick
                 )
                 PreferenceRow(
                     icon = Icons.Default.Timer,
                     title = "Sleep Timer",
                     subtitle = "Automatically pause playback",
-                    onClick = {}
+                    onClick = onSleepTimerClick
                 )
             }
         }
@@ -185,3 +187,4 @@ private fun PreferenceRow(
         )
     }
 }
+

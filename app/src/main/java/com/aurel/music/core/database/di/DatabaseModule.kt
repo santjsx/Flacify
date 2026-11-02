@@ -36,3 +36,4 @@ object DatabaseModule {
     @Provides
     fun providePlaylistDao(database: AurelDatabase): PlaylistDao = database.playlistDao()
 }
+

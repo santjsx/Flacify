@@ -149,3 +149,4 @@ class MediaStoreScanner @Inject constructor(
         }
     }
 }
+

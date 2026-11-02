@@ -137,3 +137,4 @@ class EqualizerController @Inject constructor() {
         _uiState.value = _uiState.value.copy(isAvailable = false)
     }
 }
+

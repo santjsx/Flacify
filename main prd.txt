@@ -1,0 +1,1674 @@
+# AUREL — Premium Offline Music Player
+## Product Requirements Document (PRD)
+
+**Document Version:** 1.0  
+**Date:** November 2, 2026  
+**Platform:** Android  
+**Product Category:** Native Offline Music Player  
+**Primary Experience:** Minimalist, premium, iOS-inspired  
+**Target Library Size:** 50,000+ audio tracks  
+**Development Approach:** Native Android, performance-first, modular architecture
+
+---
+
+# 1. Product Overview
+
+## 1.1 Product Objective
+
+AUREL is a native Android music player designed around five principles:
+
+1. **Clarity:** Every screen has a clear purpose. No unnecessary controls, cards, labels or decorative elements.
+2. **Fluidity:** Scrolling, navigation, transitions and playback controls respond immediately.
+3. **Consistency:** Typography, spacing, iconography, colors, shapes and interaction patterns remain consistent throughout the application.
+4. **Reliability:** Playback, indexing, library management and background operation must remain stable under real-world conditions.
+5. **Craftsmanship:** Every interaction, including loading, empty states, dialogs, error states and tiny animations, receives deliberate design attention.
+
+## 1.2 Target Audience
+
+- People with large offline music collections.
+- Users who prefer owning and managing local music.
+- Audiophiles who use lossless audio formats.
+- Users who appreciate minimal, premium interfaces.
+- Users who want a reliable music player without advertisements or unnecessary features.
+
+## 1.3 Product Scope
+
+AUREL is an offline-first music player.
+
+**Included:**
+- Local audio discovery and playback.
+- Music library management.
+- Home dashboard.
+- Songs, albums and artists.
+- Search and filters.
+- Now Playing experience.
+- Queue management.
+- Playlists and favorites.
+- Sleep timer.
+- Lyrics display.
+- Audio equalizer.
+- Light, dark and system themes.
+- GitHub Releases-based application updates.
+- Background playback.
+- Android notification and lock-screen controls.
+
+**Excluded from initial release:**
+- Music streaming subscriptions.
+- Social feeds.
+- User accounts.
+- Cloud synchronization.
+- Advertising.
+- Unnecessary AI recommendations.
+- Online music discovery.
+
+---
+
+# 2. Technology Stack
+
+Use native Android technologies. Do not build the application as a WebView or hybrid application.
+
+| Layer | Technology |
+|---|---|
+| Language | Kotlin |
+| UI | Jetpack Compose |
+| Design foundation | Material 3, heavily customized |
+| Architecture | Clean Architecture + MVVM |
+| Playback | AndroidX Media3 / ExoPlayer |
+| Background playback | MediaSessionService |
+| Database | Room |
+| Dependency injection | Hilt |
+| Async operations | Kotlin Coroutines + Flow |
+| Preferences | DataStore |
+| Artwork loading | Coil |
+| Networking | Retrofit + OkHttp |
+| Background jobs | WorkManager |
+| Navigation | Navigation Compose |
+| Testing | JUnit, MockK, Compose UI Test |
+| Performance testing | Macrobenchmark, Baseline Profiles |
+| Updates | GitHub Releases API |
+| Logging | Structured, release-safe logging |
+
+### Architectural requirements
+
+Implement the following layers:
+
+- Presentation Layer
+- Domain Layer
+- Data Layer
+- Playback Layer
+- Platform Integration Layer
+- Update Management Layer
+
+The audio engine must be independent of the Compose UI.
+
+**Critical architecture rule:** The UI must communicate with the playback engine through a MediaController/repository abstraction. Composable screens must never own the actual player lifecycle.
+
+Room is the source of truth for indexed library metadata, playlists, favorites and playback history. Actual audio files must remain in their original storage locations.
+
+---
+
+# 3. Application Information Architecture
+
+## 3.1 Primary Navigation
+
+The application must have a maximum of four primary navigation destinations.
+
+| Position | Destination | Icon concept |
+|---|---|---|
+| 1 | Home | House |
+| 2 | Library | Music / Library |
+| 3 | Search | Magnifying glass |
+| 4 | More | Three horizontal dots |
+
+The fourth destination opens a compact secondary navigation surface.
+
+### More menu
+
+Include:
+- Playlists
+- Artists
+- Albums (if not directly accessible through Library)
+- Favorites
+- Equalizer
+- Settings
+- About / Updates
+
+Avoid duplicating navigation unnecessarily. Artists and albums must also remain accessible through Library.
+
+### Navigation design
+
+- Minimal iconography.
+- Consistent icon stroke weights.
+- No unnecessary text labels when icons are sufficiently recognizable.
+- Labels appear when needed for accessibility and clarity.
+- Selected state uses a subtle filled or tonal treatment.
+- No oversized navigation backgrounds.
+- No distracting animated gradients.
+- Smooth, interruptible transitions.
+- Preserve navigation state when switching tabs.
+- Maintain the selected scroll position.
+
+The bottom navigation must never overlap the mini-player or Android system navigation area.
+
+## 3.2 Mini Player
+
+A persistent mini-player appears above primary navigation whenever music is loaded.
+
+Contents:
+
+- Album artwork.
+- Song title.
+- Artist name.
+- Play/pause button.
+- Queue or Now Playing access.
+
+Interaction:
+- Tapping the player opens Now Playing.
+- Play/pause works immediately.
+- Artwork and text remain vertically aligned.
+- Long titles scroll once when necessary, then return to their resting position.
+- The mini-player disappears when no playback session or selected track exists, according to the defined empty-state behavior.
+
+---
+
+# 4. Home Screen
+
+## 4.1 Design Objective
+
+The Home screen should feel like a personal music dashboard, not a collection of generic application cards.
+
+Use a vertically scrollable layout with clear sections and generous breathing room.
+
+### Section 1 — Header
+
+- Greeting or simple product heading.
+- Search shortcut.
+- Settings or profile-independent utility access.
+- Optional compact date/time context only if useful.
+
+Avoid generic promotional banners and large hero cards.
+
+### Section 2 — Library Overview
+
+Display three compact statistics:
+
+| Statistic | Description |
+|---|---|
+| Songs | Total indexed tracks |
+| Albums | Total unique albums |
+| Artists | Total unique artists |
+
+Requirements:
+- Numbers update automatically after scanning.
+- Use animated number transitions without changing layout dimensions.
+- Handle zero values gracefully.
+- Avoid artificial loading placeholders when cached values are available.
+- Counts must reflect the current indexed library.
+
+### Section 3 — Most Played
+
+Display the most frequently played tracks.
+
+Requirements:
+- Show a compact horizontal or vertical list.
+- Prioritize artwork, title and artist.
+- Display a sensible number of tracks without overwhelming the screen.
+- Use actual listening history.
+- Provide a View All action if the collection is larger.
+- Avoid inventing popularity rankings for songs without playback history.
+
+Define a play-count policy. A play should count only after a configurable meaningful playback threshold, such as 30 seconds or half the track duration, whichever occurs first.
+
+### Section 4 — Recently Added
+
+Display the 15 most recently indexed or added songs.
+
+Each row includes:
+- Artwork thumbnail.
+- Song title.
+- Artist name.
+- Duration.
+- Overflow menu.
+
+Requirements:
+- Exactly 15 entries maximum.
+- Sort by added timestamp, newest first.
+- Handle missing metadata.
+- Use cached artwork.
+- Tapping a song starts playback with a predictable queue policy.
+- Overflow menu supports useful song actions.
+
+### Home Screen Restrictions
+
+Do not add:
+- Unnecessary recommendation sections.
+- Multiple promotional banners.
+- Decorative statistics cards.
+- Excessive gradients.
+- Randomized content.
+- Redundant recently played sections.
+
+The Home screen should remain calm and compact.
+
+---
+
+# 5. Library Screen
+
+## 5.1 Library Structure
+
+The Library screen contains three primary categories:
+
+1. Songs
+2. Albums
+3. Artists
+
+Use a clean segmented control or compact tab switcher.
+
+The selected category must be immediately understandable.
+
+### Shared Library Header
+
+Include:
+- Category title.
+- Total item count.
+- Sort control.
+- Shuffle All.
+- Play All.
+
+Avoid placing too many prominent buttons together. Play All and Shuffle All should have a clear hierarchy, with sorting accessible through a secondary control.
+
+## 5.2 Songs
+
+Display all indexed audio tracks.
+
+Song row:
+- Artwork thumbnail.
+- Title.
+- Artist.
+- Duration.
+- Overflow menu.
+
+Sorting options:
+- Title A–Z.
+- Title Z–A.
+- Artist.
+- Album.
+- Duration.
+- Date added.
+- Date modified.
+- Play count.
+
+Requirements:
+- Stable sorting.
+- Predictable ordering for identical values.
+- Persistent sort preference.
+- Efficient database-backed pagination.
+- No unnecessary full-library recomposition.
+
+## 5.3 Albums
+
+Album grid:
+- Square artwork.
+- Album title.
+- Artist.
+- Track count.
+
+Album detail:
+- Large album artwork.
+- Album title.
+- Artist.
+- Release year when available.
+- Track count.
+- Play All.
+- Shuffle.
+- Track listing.
+- Album overflow menu.
+
+Album grouping must handle missing album names and inconsistent metadata.
+
+## 5.4 Artists
+
+Artist list:
+- Artist name.
+- Album count.
+- Track count.
+- Optional artist artwork when available.
+
+Artist detail:
+- Artist name.
+- Total songs.
+- Total albums.
+- Albums.
+- Tracks.
+- Play All.
+- Shuffle.
+
+Normalize artist names carefully without destroying original metadata.
+
+---
+
+# 6. Now Playing Screen
+
+## 6.1 Design Philosophy
+
+This is the most important screen in AUREL.
+
+It must feel immersive, balanced, premium and immediately understandable.
+
+Avoid the typical music-player mistake of adding every possible control to one screen.
+
+### Layout hierarchy
+
+1. Top navigation and playback context.
+2. Large album artwork.
+3. Track title and artist.
+4. Playback progress.
+5. Primary transport controls.
+6. Secondary playback controls.
+7. Next-up preview.
+
+### Artwork
+
+- Large square album artwork.
+- Maintain original aspect ratio through appropriate cropping.
+- Rounded corners with consistent continuous-feeling curves.
+- No unnecessary borders.
+- Subtle artwork transition when changing songs.
+- Optional dynamic background derived from album artwork.
+
+### Dynamic Artwork Background
+
+Extract a representative color palette from artwork.
+
+Use:
+- A subtle dominant-color background.
+- Carefully controlled gradients.
+- Darkened or lightened supporting surfaces.
+- High-contrast text.
+- Minimal blur.
+
+Do not allow the artwork to reduce text readability.
+
+The proposed 14.7:1 contrast target should be treated as a visual reference, not a fixed requirement for every image. Enforce WCAG AA contrast at minimum for normal text and use stronger contrast wherever practical.
+
+Never place white text directly over arbitrary bright artwork without checking contrast.
+
+### Track Information
+
+Display:
+- Song title.
+- Artist name.
+- Favorite button.
+
+Long-title behavior:
+- Show the complete title.
+- If it exceeds available width, perform one controlled marquee pass.
+- Stop at the beginning.
+- Never loop indefinitely.
+- Provide an accessible full-title description.
+
+### Playback Scrubber
+
+Visual requirements:
+- Thin resting progress line, approximately 4dp.
+- Touch target at least 44dp high.
+- Expanded visual thickness while dragging.
+- Clear buffered-progress indication when available.
+- Accurate seeking.
+- Smooth progress updates without unnecessary recomposition.
+
+Display:
+- Elapsed time.
+- Remaining time, such as `-1:48`.
+
+Remaining-time display is the default presentation. Do not make the duration impossible to access when needed.
+
+### Main Playback Controls
+
+Primary controls:
+- Previous.
+- Play/Pause.
+- Next.
+
+Design:
+- Large, prominent play/pause control.
+- Target approximately 72dp for the primary visual control.
+- Secondary skip controls smaller.
+- Accent color reserved for the primary action.
+- Immediate touch feedback.
+
+Playback controls must support:
+- Single taps.
+- Rapid repeated taps.
+- Previous/next queue boundaries.
+- Seeking during buffering.
+- Audio focus interruptions.
+
+### Secondary Controls
+
+Show no more than five visible options:
+
+1. Shuffle.
+2. Repeat.
+3. Queue / Up Next.
+4. Sleep Timer.
+5. More.
+
+The More menu contains:
+- Lyrics.
+- Equalizer.
+- Add to Playlist.
+- Go to Album.
+- Go to Artist.
+- Audio Information.
+- Share, if supported.
+- Other relevant actions.
+
+Do not clutter the main player with secondary actions.
+
+### Up Next
+
+Show a compact preview of the next track.
+
+Include:
+- Artwork.
+- Title.
+- Artist.
+
+Tapping opens the queue.
+
+Queue management:
+- Reorder tracks.
+- Remove tracks.
+- Clear queue with confirmation.
+- Add tracks.
+- Play a selected track.
+- Handle queue exhaustion.
+- Preserve queue state across configuration changes and process recovery where feasible.
+
+---
+
+# 7. Lyrics Experience
+
+Create a dedicated lyrics presentation surface.
+
+Requirements:
+- Minimal typography.
+- Centered reading layout.
+- Large readable text.
+- Generous line spacing.
+- Smooth synchronized line highlighting.
+- Subtle active-line emphasis.
+- Optional automatic scrolling.
+- Manual scrolling must temporarily disable automatic following.
+- Resume synchronization when appropriate.
+- Handle missing lyrics elegantly.
+
+Support:
+- Embedded lyrics when available.
+- Local LRC files.
+- Manually imported lyrics.
+- Unsynchronized text lyrics.
+
+Do not promise automatic lyrics retrieval without a configured and legally appropriate provider.
+
+### Lyrics Empty State
+
+Show:
+- Minimal music-related icon.
+- "No lyrics available."
+- An option to import lyrics when supported.
+
+No oversized illustrations or distracting animations.
+
+---
+
+# 8. Sleep Timer
+
+Sleep Timer must be accessible from Now Playing.
+
+### Interface
+
+Use a clean bottom sheet or compact modal.
+
+Options:
+- 5 minutes.
+- 10 minutes.
+- 15 minutes.
+- 30 minutes.
+- 45 minutes.
+- 60 minutes.
+- Custom duration.
+- End of current track.
+
+Include:
+- Remaining time.
+- Start timer.
+- Cancel timer.
+- Extend timer.
+
+### Behavior
+
+- Persist timer state across screen changes.
+- Handle application process death using an appropriate time-based mechanism.
+- Use a monotonic clock for in-session countdown accuracy.
+- Define behavior for device reboot.
+- Prevent multiple active timers.
+- Stop playback at the correct point.
+- Provide an optional fade-out feature.
+
+### Completion Experience
+
+Use a subtle animated completion popup:
+
+"Sleep timer finished"
+
+No aggressive sound, vibration or full-screen interruption.
+
+---
+
+# 9. Audio Equalizer
+
+## 9.1 Equalizer Screen
+
+Create a dedicated equalizer interface with a restrained visual design.
+
+Features:
+- Enable/disable equalizer.
+- Presets.
+- Custom equalizer.
+- Frequency-band controls.
+- Bass enhancement, if supported.
+- Virtualizer, if supported.
+- Loudness enhancement, only where supported.
+- Reset to default.
+
+Suggested presets:
+- Flat.
+- Bass Boost.
+- Treble Boost.
+- Classical.
+- Jazz.
+- Rock.
+- Pop.
+- Vocal.
+- Custom.
+
+### Technical requirements
+
+Use Android's supported audio-effect APIs where available, integrated with the active playback session.
+
+Consider:
+- Equalizer availability.
+- Device-specific effect support.
+- Audio session lifecycle.
+- Audio-effect resource release.
+- Persistence of user settings.
+- Unsupported effects.
+- Conflict with manufacturer audio enhancements.
+
+Do not assume all devices support identical frequency bands or effect types.
+
+Equalizer must not crash or break playback when an effect is unavailable.
+
+---
+
+# 10. Search System
+
+## 10.1 Search Experience
+
+Create a dedicated, fast, minimal search screen.
+
+Search across:
+- Songs.
+- Albums.
+- Artists.
+- Playlists.
+- Lyrics, only if indexed and supported.
+
+### Search Behavior
+
+- Immediate response to typing.
+- Debounced queries.
+- Case-insensitive matching.
+- Unicode-aware matching.
+- Partial matching.
+- Tolerant handling of whitespace.
+- Correct handling of punctuation.
+- No keyboard-induced layout jumps.
+- Clear button.
+- Search history with user-controlled deletion.
+
+### Filters
+
+- All.
+- Songs.
+- Albums.
+- Artists.
+- Playlists.
+
+Additional filters:
+- Duration.
+- Date added.
+- Artist.
+- Album.
+- Favorites.
+- Audio format, where metadata is available.
+
+### Search Results
+
+Display grouped results with a View All action.
+
+Each result must:
+- Open the correct entity.
+- Preserve search state when returning.
+- Provide contextual overflow actions.
+- Handle duplicate titles without confusing the user.
+
+### Performance
+
+Search must query indexed database fields rather than scan the entire library in memory.
+
+Use appropriate database indexes and pagination.
+
+A search query should not trigger a full library scan.
+
+---
+
+# 11. Playlists and Favorites
+
+## 11.1 Playlists
+
+Features:
+- Create playlist.
+- Rename.
+- Delete.
+- Add songs.
+- Remove songs.
+- Reorder songs.
+- Play all.
+- Shuffle.
+- Playlist artwork generated from available track artwork.
+- Empty playlist state.
+
+Playlist changes must be transactional.
+
+## 11.2 Favorites
+
+Features:
+- Favorite/unfavorite songs.
+- Dedicated favorites collection.
+- Shuffle favorites.
+- Play favorites.
+- Persist across restarts.
+
+Use a consistent favorite state across Home, Library, Search and Now Playing.
+
+---
+
+# 12. Settings Screen
+
+The Settings page must feel like a carefully organized system preferences interface.
+
+Use grouped sections with simple descriptions.
+
+### Appearance
+
+- Light.
+- Dark.
+- System Default.
+- Dynamic artwork colors.
+- App accent preference, if implemented.
+
+Theme changes must apply without activity recreation unless unavoidable.
+
+Prevent theme flashes during application startup.
+
+### Playback
+
+- Gapless playback.
+- Crossfade, optional and disabled by default.
+- Resume playback.
+- Audio focus behavior.
+- Headphone unplug behavior.
+- Remember playback position.
+- Default shuffle/repeat behavior.
+
+### Library
+
+- Scan music.
+- Rescan library.
+- Music folders.
+- Excluded folders.
+- Minimum track duration.
+- Hidden files.
+- Artwork preferences.
+- Library scan history.
+
+Maintain the previously defined 15-second minimum track-duration exclusion as the default, with an explicit setting to change it.
+
+### Storage
+
+- Indexed songs.
+- Albums.
+- Artists.
+- Artwork cache size.
+- Database information.
+- Clear artwork cache.
+- Rescan library.
+
+Never delete original audio files when clearing application caches.
+
+### Updates
+
+- Check for updates.
+- Current version.
+- Latest available version.
+- Release notes.
+- Download update.
+- Install update.
+
+### About
+
+- App version.
+- Build number.
+- Open-source licenses.
+- GitHub repository.
+- Privacy information.
+- Report a problem.
+
+---
+
+# 13. GitHub Releases Update System
+
+Use GitHub Releases as the distribution and update source.
+
+### Update Flow
+
+1. User opens Updates.
+2. App checks the configured GitHub Releases endpoint.
+3. Retrieve the latest stable release.
+4. Compare release version with installed version.
+5. Show an update dialog when a newer compatible version exists.
+6. Display version, release notes and file size.
+7. User selects Download.
+8. Download APK with progress feedback.
+9. Verify APK integrity and signing identity.
+10. Launch Android's package installation flow.
+11. User confirms installation.
+12. Application restarts with the updated version.
+
+### Update Interface
+
+Dialog example:
+
+**A new version is available**
+
+Version 1.2.0
+
+- Improved library scanning.
+- Refined playback controls.
+- Performance improvements.
+
+Actions:
+- Later.
+- View Release Notes.
+- Update Now.
+
+### Security Requirements
+
+- HTTPS only.
+- Validate release metadata.
+- Verify SHA-256 checksum.
+- Verify APK signing certificate against the trusted release signer.
+- Reject unexpected signing identities.
+- Handle download interruptions.
+- Handle insufficient storage.
+- Handle unavailable GitHub services.
+- Never install arbitrary APK files.
+- Never attempt silent installation without authorized system privileges.
+
+**Important:** GitHub Releases does not provide silent OTA installation for ordinary Android apps. The user must approve installation through Android's package installer, and the application may need permission to request package installation.
+
+Do not describe this as a fully automatic background update system.
+
+---
+
+# 14. Audio Engine and Playback Requirements
+
+This is a critical subsystem. A premium UI is worthless if playback is unreliable.
+
+## 14.1 Supported Formats
+
+Implement and test supported Media3/ExoPlayer formats, including where device decoders permit:
+
+- MP3.
+- AAC.
+- FLAC.
+- WAV.
+- OGG Vorbis.
+- Opus.
+- M4A.
+- ALAC, subject to decoder support.
+
+Do not claim universal codec support across every Android device.
+
+## 14.2 Lossless Playback
+
+Requirements:
+- Preserve source audio quality.
+- Avoid unnecessary transcoding.
+- Use supported device decoders.
+- Support high-resolution source files where the device output path permits.
+- Display source codec, sample rate, bit depth and bitrate when reliably available.
+- Handle unsupported formats gracefully.
+
+Distinguish lossless file decoding from bit-perfect output. Android's audio mixer, hardware and output route can resample or otherwise alter the output.
+
+## 14.3 Background Playback
+
+Implement:
+- Foreground playback service.
+- MediaSession.
+- Media notification.
+- Lock-screen controls.
+- Bluetooth controls.
+- Wired headphone controls.
+- Audio focus handling.
+- Audio becoming noisy handling.
+- Playback restoration.
+
+Playback must not depend on the UI Activity remaining alive.
+
+## 14.4 Playback State Machine
+
+Explicitly define states:
+
+- Idle.
+- Preparing.
+- Buffering.
+- Ready.
+- Playing.
+- Paused.
+- Seeking.
+- Ended.
+- Error.
+
+Prevent invalid state transitions.
+
+Rapid play/pause/next/previous actions must not produce multiple conflicting player instances.
+
+## 14.5 Queue Management
+
+Support:
+- Current track.
+- Next track.
+- Previous track.
+- Shuffle order.
+- Repeat off.
+- Repeat one.
+- Repeat all.
+- Queue persistence.
+- Queue restoration.
+- Removed source files.
+- Corrupted files.
+- Unsupported files.
+
+---
+
+# 15. Music Library Scanning
+
+## 15.1 Discovery
+
+Use Android MediaStore as the primary media discovery mechanism.
+
+Request the appropriate media permissions for the Android version.
+
+Support Android 13+ granular audio permission requirements and handle newer platform permission behavior.
+
+### Scanning Strategy
+
+Never perform a full library scan on the main thread.
+
+Use:
+- Incremental indexing.
+- MediaStore change detection.
+- Stable track identifiers.
+- Transactional database upserts.
+- Stale record removal.
+- Background processing.
+- Scan cancellation.
+- Scan progress reporting.
+
+### Metadata
+
+Index:
+- Track ID.
+- URI.
+- Title.
+- Artist.
+- Album.
+- Album artist.
+- Duration.
+- Track number.
+- Disc number.
+- Year.
+- File size.
+- MIME type.
+- Date added.
+- Date modified.
+- Audio format where available.
+- Artwork reference.
+
+Handle missing and malformed metadata without crashing.
+
+### Large Library Requirement
+
+Target 50,000+ tracks.
+
+The system must:
+- Avoid loading all songs into Compose state.
+- Use Paging 3 or equivalent paginated data loading.
+- Use Room indexes.
+- Use efficient queries.
+- Cache artwork thumbnails.
+- Downsample artwork.
+- Avoid unnecessary image decoding.
+- Avoid N+1 database queries.
+- Avoid full-list recomposition.
+- Keep memory consumption bounded.
+
+### Scan Feedback
+
+During scanning:
+- Show indexed count.
+- Show progress when measurable.
+- Allow cancellation.
+- Avoid blocking playback.
+- Show a completion toast or lightweight notification.
+
+Example:
+
+"Music library updated · 248 new tracks"
+
+If no new tracks are found:
+
+"Your music library is up to date."
+
+---
+
+# 16. Design System
+
+## 16.1 Design Philosophy
+
+Use Apple's Human Interface Guidelines as design inspiration, not as a rigid platform replacement.
+
+Preserve Android conventions wherever they provide better usability or accessibility.
+
+Avoid:
+- Generic AI-generated dashboards.
+- Random gradients.
+- Excessive glassmorphism.
+- Glowing borders.
+- Decorative cards.
+- Oversized headings.
+- Inconsistent rounded corners.
+- Unnecessary icons.
+- Excessive animations.
+- Fake loading animations.
+
+## 16.2 Typography
+
+Typography must feel deliberate and consistent.
+
+Recommended approach:
+- Android system sans-serif for native integration.
+- A carefully licensed alternative such as Inter if a distinctive product identity is required.
+- Clear type hierarchy.
+- Consistent font weights.
+- No unnecessary letter spacing.
+- Tabular numerals for timers and playback duration.
+
+Suggested scale:
+
+| Usage | Size |
+|---|---:|
+| Screen title | 28sp |
+| Section title | 21sp |
+| Primary content | 16sp |
+| Secondary content | 14sp |
+| Metadata | 12sp |
+| Playback time | 12–13sp |
+
+Use font scaling correctly. Do not hardcode text heights that clip accessibility-scaled text.
+
+Do not bundle Apple's proprietary San Francisco font without the appropriate licensing rights.
+
+## 16.3 Color System
+
+Create semantic color tokens rather than scattering hardcoded colors throughout the UI.
+
+### Dark Theme
+
+- Background: near-black charcoal.
+- Primary surface: slightly elevated charcoal.
+- Secondary surface: muted dark gray.
+- Primary text: soft white.
+- Secondary text: neutral gray.
+- Accent: restrained system-inspired accent.
+- Dividers: low-contrast neutral.
+- Error: accessible red.
+
+### Light Theme
+
+- Background: warm or neutral off-white.
+- Primary surface: white.
+- Secondary surface: light gray.
+- Primary text: deep charcoal.
+- Secondary text: neutral gray.
+- Accent: same brand accent.
+- Dividers: subtle gray.
+
+### System Theme
+
+Follow Android system appearance.
+
+### Dynamic Artwork Theme
+
+Artwork-derived colors may be used on Now Playing and selected album contexts.
+
+They must never override:
+- Readability.
+- Accessibility.
+- Critical action visibility.
+- Consistent navigation styling.
+
+## 16.4 Shapes and Spacing
+
+Define a spacing scale based on 4dp increments.
+
+Suggested values:
+- 4dp: micro spacing.
+- 8dp: compact spacing.
+- 12dp: row spacing.
+- 16dp: standard padding.
+- 24dp: section spacing.
+- 32dp: major separation.
+
+Use a consistent corner-radius scale.
+
+Do not give every component a rounded container. Containers should exist only when they improve hierarchy or grouping.
+
+## 16.5 Iconography
+
+Use a single coherent icon family.
+
+Requirements:
+- Consistent optical weight.
+- Consistent stroke widths.
+- Clear active and inactive states.
+- Recognizable metaphors.
+- Proper touch targets.
+- No mixed icon styles.
+
+Prefer simple line icons with filled selected states where appropriate.
+
+---
+
+# 17. Motion and Interaction Design
+
+Motion must communicate state, hierarchy and physical continuity.
+
+It must never become decoration that slows down the experience.
+
+## 17.1 Touch Feedback
+
+- Respond on touch-down.
+- Provide immediate visual acknowledgement.
+- Use subtle scale or tonal changes.
+- Avoid delayed press effects.
+- Maintain correct ripple or pressed-state behavior.
+- Support cancellation when the user moves away from a control.
+
+Do not promise literally zero milliseconds of end-to-end response. The target is immediate perceptible feedback within the next rendered frame.
+
+## 17.2 Spring Physics
+
+Use interruptible spring-based animations for:
+- Bottom sheets.
+- Artwork transitions.
+- Mini-player expansion.
+- Queue interactions.
+- Navigation surfaces.
+- Press and release feedback.
+
+Use damped harmonic motion:
+
+`m × x'' + c × x' + k × x = 0`
+
+Where:
+- m = effective mass.
+- c = damping coefficient.
+- k = spring stiffness.
+
+Tune stiffness and damping per interaction.
+
+The animation must respond to a new gesture from its current position and velocity, not restart from the beginning.
+
+## 17.3 Scroll Physics
+
+Implement native Android scrolling behavior with carefully calibrated edge effects.
+
+For an optional custom bounded overscroll model, use the proposed hyperbolic function:
+
+`offset = (1 - 1 / (c × x / d + 1)) × d`
+
+Where:
+- x = pull distance.
+- d = available screen dimension.
+- c = tuning constant.
+
+The curve should approach a bounded maximum without allowing infinite displacement.
+
+However:
+- Do not replace Android's native nested-scroll handling unnecessarily.
+- Preserve accessibility and gesture navigation.
+- Ensure horizontal and vertical scrolling do not conflict.
+- Test on different screen densities and refresh rates.
+
+The formula is a design hypothesis to calibrate, not proof of Apple's actual private UIKit implementation.
+
+## 17.4 Motion Specifications
+
+| Interaction | Target |
+|---|---|
+| Press feedback | Next rendered frame |
+| Small control transition | 100–160ms |
+| Screen transition | 180–280ms |
+| Bottom sheet | 250–350ms |
+| Artwork transition | 200–300ms |
+| Spring settling | Physics-driven |
+| Toast | Approximately 2–3 seconds |
+
+Use motion preferences and accessibility settings appropriately.
+
+## 17.5 Momentum and Scroll
+
+- Use native fling physics.
+- Avoid artificial scroll timers.
+- Avoid resetting list positions unexpectedly.
+- Preserve scroll state across navigation.
+- Avoid nested scrolling unless necessary.
+- Ensure high-refresh-rate devices remain smooth.
+
+---
+
+# 18. Loading, Empty and Error States
+
+Every screen and asynchronous operation needs a defined state.
+
+## Loading States
+
+- Prefer cached content immediately.
+- Use compact placeholders only when necessary.
+- Prevent large skeleton flashes.
+- Avoid full-screen spinners for minor operations.
+- Use subtle progress indicators for long-running scans.
+
+## Empty States
+
+Examples:
+
+**No music found**
+
+"Your music library is empty."
+
+Action: Scan Music.
+
+**No favorites**
+
+"Your favorite tracks will appear here."
+
+**No playlists**
+
+"Create a playlist to organize your music."
+
+**No search results**
+
+"No matches found."
+
+Action: Clear filters.
+
+**No albums**
+
+"Albums will appear here when music is indexed."
+
+Empty states must be informative, visually quiet and actionable.
+
+## Error States
+
+Define recovery for:
+- Permission denied.
+- File unavailable.
+- Corrupted metadata.
+- Unsupported audio format.
+- Decoder failure.
+- Storage unavailable.
+- Database migration failure.
+- Network unavailable.
+- GitHub API rate limit.
+- Failed APK download.
+- Installation rejected.
+
+Errors must never silently corrupt the queue or library.
+
+---
+
+# 19. Android System Integration
+
+This section is mandatory.
+
+## 19.1 System Bars
+
+The app must support modern edge-to-edge Android layouts.
+
+Requirements:
+- Correct status bar insets.
+- Correct navigation bar insets.
+- Display cutout handling.
+- Gesture navigation.
+- Three-button navigation.
+- IME/keyboard insets.
+- Bottom sheet inset handling.
+- Full-screen Now Playing layout without content obstruction.
+
+Use WindowInsets APIs and apply padding at the correct container boundaries.
+
+Do not apply system insets twice.
+
+Do not hardcode status bar or navigation bar heights.
+
+Test all major screens with:
+- Gesture navigation.
+- Three-button navigation.
+- Keyboard open.
+- Landscape orientation.
+- Display cutouts.
+- Different density configurations.
+
+## 19.2 Accessibility
+
+- Minimum 48dp interactive targets where appropriate.
+- Screen-reader descriptions.
+- Proper semantic roles.
+- Sufficient contrast.
+- Scalable text.
+- Keyboard and switch-access support where relevant.
+- Reduced motion consideration.
+- Clear focus order.
+
+## 19.3 Device Compatibility
+
+Test:
+- Android 10 and above where supported by the chosen dependencies.
+- Different OEM implementations.
+- Low-memory devices.
+- High-refresh-rate displays.
+- Large-screen devices.
+- Different audio output routes.
+- Bluetooth devices.
+- Headphones.
+- USB DACs where supported.
+
+Define a minimum supported Android version before implementation begins.
+
+---
+
+# 20. Performance and Reliability Requirements
+
+The following are engineering targets, not guarantees.
+
+| Metric | Target |
+|---|---|
+| Cold startup | p95 under 2 seconds on reference devices |
+| Warm startup | p95 under 1 second |
+| Cached library display | Under 500ms target |
+| Search response | p95 under 200ms for indexed queries |
+| UI frame budget | 16.7ms at 60Hz |
+| High-refresh frame budget | 8.3ms at 120Hz |
+| Main-thread blocking | No disk or metadata processing |
+| Full-library indexing | Background and incremental |
+| Playback control response | Immediate perceptible feedback |
+| Playback state recovery | Defined and tested |
+| Memory usage | Bounded with library size |
+| Crash-free sessions | Target 99.9%+ after release stabilization |
+
+Measure performance on actual devices rather than relying exclusively on emulators.
+
+### Performance Rules
+
+1. No database queries on the main thread.
+2. No audio decoding on the UI thread.
+3. No full-resolution artwork decoding for thumbnails.
+4. No unbounded in-memory song collections.
+5. No unnecessary recompositions.
+6. No blocking operations inside Composables.
+7. No repeated full-library scans.
+8. No unnecessary Activity recreation.
+9. No duplicate playback engine instances.
+10. No expensive blur effects on large surfaces.
+11. No unbounded coroutine launches.
+12. No uncontrolled background work.
+
+---
+
+# 21. Database and Data Models
+
+Design Room entities for:
+
+- SongEntity.
+- AlbumEntity.
+- ArtistEntity.
+- PlaylistEntity.
+- PlaylistTrackEntity.
+- FavoriteEntity.
+- PlaybackHistoryEntity.
+- ScanStateEntity.
+- UserPreferencesEntity.
+
+### Data Integrity
+
+- Use stable MediaStore identifiers.
+- Handle content URI changes.
+- Use database transactions.
+- Define foreign-key behavior.
+- Avoid duplicate songs.
+- Handle deleted files.
+- Handle renamed files.
+- Handle missing artwork.
+- Support schema migrations.
+- Maintain deterministic queue ordering.
+
+Do not use filenames as the sole identifier for songs.
+
+---
+
+# 22. Security and Privacy
+
+AUREL should not collect unnecessary personal information.
+
+Requirements:
+- No mandatory user account.
+- No analytics that collect personal audio filenames or metadata.
+- No unnecessary network access.
+- Explicit permission requests.
+- Secure update metadata handling.
+- APK signature verification.
+- No arbitrary executable downloads.
+- No hidden background uploads.
+- Clear privacy policy.
+- No audio file modification without user consent.
+
+The application should remain fully functional offline apart from optional update checks or explicitly enabled network-dependent features.
+
+---
+
+# 23. Testing Strategy
+
+AUREL must have a formal testing strategy.
+
+## Unit Tests
+
+Test:
+- Sorting.
+- Filtering.
+- Search.
+- Queue management.
+- Shuffle.
+- Repeat.
+- Play count.
+- Recently added ordering.
+- Playlist operations.
+- Timer calculations.
+- Metadata normalization.
+- Database migrations.
+- Update version comparison.
+
+## Integration Tests
+
+Test:
+- MediaStore indexing.
+- Room persistence.
+- Media3 playback.
+- MediaSession communication.
+- Equalizer lifecycle.
+- Notification actions.
+- GitHub update metadata.
+- Download integrity verification.
+
+## UI Tests
+
+Test:
+- All navigation destinations.
+- Now Playing.
+- Mini-player.
+- Search.
+- Filters.
+- Sort.
+- Dialogs.
+- Bottom sheets.
+- Theme switching.
+- Empty states.
+- Error states.
+- Insets.
+- Accessibility semantics.
+
+## Stress Tests
+
+Test with:
+- 1,000 tracks.
+- 10,000 tracks.
+- 25,000 tracks.
+- 50,000+ tracks.
+- Large album artwork.
+- Missing metadata.
+- Corrupted files.
+- Duplicate filenames.
+- Very long titles.
+- Unicode filenames.
+- Rapid playback controls.
+- Frequent screen rotation.
+- Process death.
+- Storage removal.
+- Permission revocation.
+
+## Audio Interruption Tests
+
+Test:
+- Incoming calls.
+- Navigation audio.
+- Bluetooth disconnection.
+- Wired headphone removal.
+- Audio focus loss.
+- Audio focus recovery.
+- Device sleep.
+- Battery optimization.
+- Low storage.
+- Playback service recreation.
+
+## Acceptance Gate
+
+A feature is not complete merely because its screen renders.
+
+It must pass:
+1. Functional tests.
+2. Error-path tests.
+3. Accessibility checks.
+4. Performance checks.
+5. Device compatibility checks.
+6. Regression tests.
+
+---
+
+# 24. Development Roadmap
+
+## Phase 1 — Foundation
+
+- Project setup.
+- Architecture.
+- Design tokens.
+- Navigation.
+- Theme engine.
+- Room database.
+- Dependency injection.
+- System bar handling.
+
+**Exit criteria:** Stable application shell with correct system insets and no visual startup flash.
+
+## Phase 2 — Audio Engine
+
+- Media3 integration.
+- MediaSessionService.
+- Background playback.
+- Audio focus.
+- Notification controls.
+- Queue engine.
+- Playback state management.
+
+**Exit criteria:** Reliable playback independent of the UI lifecycle.
+
+## Phase 3 — Library Engine
+
+- MediaStore integration.
+- Permissions.
+- Incremental indexing.
+- Room persistence.
+- Songs, albums and artists.
+- Artwork caching.
+- Large-library pagination.
+
+**Exit criteria:** Correct indexing and navigation with a 50,000-track test library.
+
+## Phase 4 — Core UI
+
+- Home.
+- Library.
+- Song list.
+- Album detail.
+- Artist detail.
+- Mini-player.
+- Now Playing.
+
+**Exit criteria:** Complete functional music-player experience.
+
+## Phase 5 — Advanced Features
+
+- Search.
+- Filters.
+- Sort.
+- Playlists.
+- Favorites.
+- Sleep timer.
+- Lyrics.
+- Equalizer.
+- Queue management.
+
+**Exit criteria:** All features integrated with persistent state and tested error handling.
+
+## Phase 6 — Refinement
+
+- Animation tuning.
+- Haptics.
+- Artwork palette extraction.
+- Scroll performance.
+- Empty states.
+- Toasts.
+- Dialogs.
+- Accessibility.
+- Light/dark/system modes.
+
+**Exit criteria:** Consistent visual quality and measured performance.
+
+## Phase 7 — Updates and Release
+
+- GitHub Releases integration.
+- APK integrity verification.
+- Update dialogs.
+- Installation flow.
+- Release signing.
+- Regression testing.
+- Device testing.
+- Release documentation.
+
+**Exit criteria:** Secure, tested and reproducible release process.
+
+---
+
+# 25. Definition of Done
+
+AUREL is ready for release only when:
+
+- All primary navigation works.
+- All library categories work.
+- Home statistics are accurate.
+- Recently Added displays the latest 15 tracks.
+- Most Played uses actual listening history.
+- Search and filters work correctly.
+- Playlists persist.
+- Favorites persist.
+- Now Playing controls work.
+- Queue management works.
+- Sleep Timer works after navigation and defined lifecycle interruptions.
+- Lyrics handle synchronized and unsynchronized formats.
+- Equalizer handles unsupported devices.
+- Lossless formats are tested on supported output paths.
+- Background playback works.
+- Notifications and Bluetooth controls work.
+- Theme switching is stable.
+- GitHub update verification works.
+- No system-bar overlap exists.
+- 50,000+ track indexing and browsing are validated.
+- No critical or high-severity defects remain.
+- Performance budgets are met on reference devices.
+- Accessibility requirements are met.
+
+---
+
+# 26. Final Product Design Rules
+
+These rules apply to every screen, dialog, menu, popup, component and interaction.
+
+1. Every element must justify its existence.
+2. Prefer whitespace over decorative containers.
+3. Use one consistent icon family.
+4. Never use gradients without a clear functional or visual purpose.
+5. Use artwork-derived color selectively.
+6. Never sacrifice readability for aesthetics.
+7. Never block playback while scanning music.
+8. Never perform expensive operations on the main thread.
+9. Never create duplicate player instances.
+10. Never introduce layout shifts when content loads.
+11. Never show skeleton loaders when cached content is already available.
+12. Never animate every element independently.
+13. Every animation must be interruptible where interaction requires it.
+14. Every interactive element must provide immediate feedback.
+15. Every empty state must explain what happened and what to do.
+16. Every error must have a defined recovery path.
+17. Every screen must respect Android system insets.
+18. Every important operation must survive appropriate lifecycle events.
+19. Every visual decision must be consistent with the design system.
+20. No feature should be added merely because another music player has it.
+
+---
+
+# 27. Final Product Vision
+
+AUREL should feel like a carefully engineered native music application rather than a generic Android music-player template.
+
+The interface should be quiet. The playback should be dependable. The navigation should be predictable. The animations should feel physical. The typography should be precise. The library should scale without compromising performance.
+
+**The defining characteristic of AUREL is not how many features it has. It is how little friction exists between opening the application and enjoying music.**
+
+Build the audio engine and data architecture first. Build the visual experience on top of reliable foundations. Never hide an engineering limitation behind a beautiful animation.
+
+**Product success criterion:** A user with 50,000 local music tracks should be able to open AUREL, find a specific song, start playback, navigate the library and continue listening in the background without experiencing avoidable friction.

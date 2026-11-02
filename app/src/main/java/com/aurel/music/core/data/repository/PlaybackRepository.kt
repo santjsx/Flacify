@@ -29,3 +29,4 @@ interface PlaybackRepository {
     fun moveQueueItem(fromIndex: Int, toIndex: Int)
     fun clearQueue()
 }
+

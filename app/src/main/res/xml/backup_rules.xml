@@ -3,3 +3,4 @@
     <exclude domain="database" path="aurel.db" />
     <exclude domain="root" path="cache" />
 </full-backup-content>
+

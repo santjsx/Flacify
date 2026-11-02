@@ -51,3 +51,4 @@ data class AudioFormatInfo(
     val bitrateKbps: Int,
     val isLossless: Boolean
 )
+

@@ -60,3 +60,4 @@ class SearchViewModel @Inject constructor(
         playbackRepository.playSong(song, searchResults.value)
     }
 }
+

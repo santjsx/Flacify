@@ -63,3 +63,4 @@ class HomeViewModelTest {
         coVerify { playbackRepository.playSong(song, listOf(song)) }
     }
 }
+

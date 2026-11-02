@@ -20,9 +20,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -54,19 +56,25 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.aurel.music.core.audio.equalizer.EqualizerController
+import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.RepeatMode
 import com.aurel.music.core.model.ShuffleMode
 import com.aurel.music.core.ui.component.HighPrecisionScrubber
 import com.aurel.music.core.ui.component.MarqueeText
 import com.aurel.music.core.ui.component.SongRow
+import com.aurel.music.feature.equalizer.EqualizerSheet
+import com.aurel.music.feature.lyrics.LyricsScreen
+import com.aurel.music.feature.timer.SleepTimerSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NowPlayingScreen(
     viewModel: NowPlayingViewModel,
+    sleepTimerManager: SleepTimerManager,
+    equalizerController: EqualizerController,
     onDismiss: () -> Unit,
-    onOpenSleepTimer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
@@ -78,6 +86,9 @@ fun NowPlayingScreen(
     val queue by viewModel.queue.collectAsStateWithLifecycle()
 
     var showQueueSheet by remember { mutableStateOf(false) }
+    var showSleepTimerSheet by remember { mutableStateOf(false) }
+    var showEqualizerSheet by remember { mutableStateOf(false) }
+    var showLyricsScreen by remember { mutableStateOf(false) }
 
     if (currentSong == null) {
         onDismiss()
@@ -122,7 +133,7 @@ fun NowPlayingScreen(
                     color = AurelTheme.colors.secondaryText
                 )
 
-                IconButton(onClick = onOpenSleepTimer) {
+                IconButton(onClick = { showSleepTimerSheet = true }) {
                     Icon(
                         imageVector = Icons.Default.Timer,
                         contentDescription = "Sleep timer",
@@ -251,7 +262,7 @@ fun NowPlayingScreen(
                 }
             }
 
-            // 6. Secondary Controls: Shuffle, Repeat, Queue toggle
+            // 6. Secondary Controls: Shuffle, Repeat, Lyrics, Equalizer, Queue
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -272,6 +283,22 @@ fun NowPlayingScreen(
                         imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
                         contentDescription = "Repeat",
                         tint = if (repeatMode != RepeatMode.OFF) AurelTheme.colors.accent else AurelTheme.colors.secondaryText
+                    )
+                }
+
+                IconButton(onClick = { showLyricsScreen = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Lyrics,
+                        contentDescription = "Lyrics",
+                        tint = AurelTheme.colors.secondaryText
+                    )
+                }
+
+                IconButton(onClick = { showEqualizerSheet = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Equalizer,
+                        contentDescription = "Equalizer",
+                        tint = AurelTheme.colors.secondaryText
                     )
                 }
 
@@ -320,5 +347,33 @@ fun NowPlayingScreen(
                 }
             }
         }
+
+        // Sleep Timer Sheet
+        if (showSleepTimerSheet) {
+            SleepTimerSheet(
+                timerManager = sleepTimerManager,
+                onDismiss = { showSleepTimerSheet = false }
+            )
+        }
+
+        // Equalizer Sheet
+        if (showEqualizerSheet) {
+            EqualizerSheet(
+                equalizerController = equalizerController,
+                onDismiss = { showEqualizerSheet = false }
+            )
+        }
+
+        // Synchronized Lyrics Full Screen Overlay
+        if (showLyricsScreen) {
+            LyricsScreen(
+                song = song,
+                currentPositionMs = currentPositionMs,
+                lyrics = null, // Will parse local LRC if present
+                onSeek = { viewModel.seekTo(it) },
+                onDismiss = { showLyricsScreen = false }
+            )
+        }
     }
 }
+
