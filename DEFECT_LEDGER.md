@@ -30,6 +30,7 @@
 | DEF-004 | Phase 5 | Sleep Timer Testing | Med | Host JVM test threw `RuntimeException: Method uptimeMillis in android.os.SystemClock not mocked` | Resolved | Replaced `SystemClock.uptimeMillis()` with standard monotonic `System.nanoTime() / 1_000_000L` and enabled `unitTests.isReturnDefaultValues = true` |
 | DEF-005 | Phase 6 | Now Playing Opacity | Med | Semi-transparent background brush allowed underlying list text to bleed through | Resolved | Added base opaque background modifier before overlaying dynamic artwork brush |
 | DEF-006 | Phase 7 | StateFlow Unit Test | Low | `selectedAlbumSongs` StateFlow with `WhileSubscribed` returned empty without active subscriber | Resolved | Launched subscriber in `backgroundScope` using `UnconfinedTestDispatcher` in unit tests |
+| DEF-007 | Post-P7 | Navigation & Back Handling | High | Swiping back in Now Playing or switching tabs exited the app due to missing `BackHandler`s and unmanaged bottom nav stack | Resolved | Added `BackHandler` to `NowPlayingScreen`, `LyricsScreen`, `SearchScreen`, and `LibraryScreen`; added vertical drag-down-to-dismiss gesture on Now Playing; implemented resilient `destinationStack` with double-back exit debounce on Home |
 
 ---
 
