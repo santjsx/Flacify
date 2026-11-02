@@ -13,9 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -33,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelSprings
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Song
@@ -88,7 +86,7 @@ fun SongRow(
             )
             if (song.albumId <= 0L) {
                 Icon(
-                    imageVector = Icons.Default.MusicNote,
+                    imageVector = AurelIcons.MusicNote,
                     contentDescription = null,
                     tint = AurelTheme.colors.tertiaryText,
                     modifier = Modifier.size(24.dp)
@@ -133,7 +131,7 @@ fun SongRow(
             modifier = Modifier.size(36.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.MoreVert,
+                imageVector = AurelIcons.More,
                 contentDescription = "Song options",
                 tint = AurelTheme.colors.secondaryText,
                 modifier = Modifier.size(20.dp)

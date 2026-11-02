@@ -16,14 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.data.repository.PlaylistRepository
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Playlist
 import com.aurel.music.core.ui.component.SongRow
@@ -90,7 +83,7 @@ fun PlaylistsSheet(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.QueueMusic,
+                        imageVector = AurelIcons.Queue,
                         contentDescription = null,
                         tint = AurelTheme.colors.accent,
                         modifier = Modifier.size(26.dp)
@@ -119,14 +112,14 @@ fun PlaylistsSheet(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
+                            imageVector = AurelIcons.Add,
                             contentDescription = "New Playlist",
                             tint = AurelTheme.colors.accent
                         )
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = AurelIcons.Close,
                             contentDescription = "Close",
                             tint = AurelTheme.colors.secondaryText
                         )
@@ -161,7 +154,7 @@ fun PlaylistsSheet(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.QueueMusic,
+                                    imageVector = AurelIcons.Queue,
                                     contentDescription = null,
                                     tint = AurelTheme.colors.accent,
                                     modifier = Modifier.size(24.dp)
@@ -181,7 +174,7 @@ fun PlaylistsSheet(
                                 )
                             }
                             Icon(
-                                imageVector = Icons.Default.ChevronRight,
+                                imageVector = AurelIcons.ChevronRight,
                                 contentDescription = null,
                                 tint = AurelTheme.colors.tertiaryText,
                                 modifier = Modifier.size(20.dp)
@@ -202,7 +195,7 @@ fun PlaylistsSheet(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.QueueMusic,
+                            imageVector = AurelIcons.Queue,
                             contentDescription = null,
                             tint = AurelTheme.colors.tertiaryText,
                             modifier = Modifier.size(48.dp)
@@ -308,7 +301,7 @@ fun PlaylistsSheet(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = AurelIcons.Delete,
                             contentDescription = "Delete Playlist",
                             tint = AurelTheme.colors.error
                         )
@@ -331,7 +324,7 @@ fun PlaylistsSheet(
                             colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
                             shape = AurelTheme.shapes.small
                         ) {
-                            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                            Icon(imageVector = AurelIcons.Play, contentDescription = null, tint = AurelTheme.colors.primaryText)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(text = "Play All", color = AurelTheme.colors.primaryText)
                         }
@@ -346,7 +339,7 @@ fun PlaylistsSheet(
                             colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.surfaceVariant),
                             shape = AurelTheme.shapes.small
                         ) {
-                            Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                            Icon(imageVector = AurelIcons.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(text = "Shuffle", color = AurelTheme.colors.primaryText)
                         }

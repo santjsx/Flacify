@@ -16,9 +16,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurel.music.core.audio.equalizer.EqualizerBand
 import com.aurel.music.core.audio.equalizer.EqualizerController
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +68,7 @@ fun EqualizerSheet(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Equalizer,
+                        imageVector = AurelIcons.Equalizer,
                         contentDescription = null,
                         tint = AurelTheme.colors.accent,
                         modifier = Modifier.size(24.dp)
@@ -97,7 +95,7 @@ fun EqualizerSheet(
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = AurelIcons.Close,
                             contentDescription = "Close",
                             tint = AurelTheme.colors.secondaryText
                         )

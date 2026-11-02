@@ -17,12 +17,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
@@ -48,6 +44,7 @@ import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.data.repository.PlaylistRepository
 import com.aurel.music.core.data.repository.SongRepository
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.ui.component.MiniPlayer
 import com.aurel.music.feature.equalizer.EqualizerSheet
@@ -66,11 +63,11 @@ import com.aurel.music.feature.search.SearchScreen
 import com.aurel.music.feature.search.SearchViewModel
 import com.aurel.music.feature.timer.SleepTimerSheet
 
-enum class NavigationDestination(val label: String, val icon: ImageVector) {
-    HOME("Home", Icons.Default.Home),
-    LIBRARY("Library", Icons.Default.LibraryMusic),
-    SEARCH("Search", Icons.Default.Search),
-    MORE("More", Icons.Default.MoreHoriz)
+enum class NavigationDestination(val label: String, val icon: () -> ImageVector) {
+    HOME("Home", { AurelIcons.Home }),
+    LIBRARY("Library", { AurelIcons.Library }),
+    SEARCH("Search", { AurelIcons.Search }),
+    MORE("More", { AurelIcons.More })
 }
 
 @Composable
@@ -169,14 +166,16 @@ fun NavigationScaffold(
                                 onClick = { navigateTo(destination) },
                                 icon = {
                                     Icon(
-                                        imageVector = destination.icon,
-                                        contentDescription = destination.label
+                                        imageVector = destination.icon(),
+                                        contentDescription = destination.label,
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 },
                                 label = {
                                     Text(
                                         text = destination.label,
-                                        style = AurelTheme.typography.metadata
+                                        style = AurelTheme.typography.metadata,
+                                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal
                                     )
                                 },
                                 colors = NavigationBarItemDefaults.colors(
@@ -184,7 +183,7 @@ fun NavigationScaffold(
                                     selectedTextColor = AurelTheme.colors.accent,
                                     unselectedIconColor = AurelTheme.colors.secondaryText,
                                     unselectedTextColor = AurelTheme.colors.secondaryText,
-                                    indicatorColor = AurelTheme.colors.surfaceVariant
+                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent
                                 )
                             )
                         }

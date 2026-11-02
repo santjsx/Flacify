@@ -23,11 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.aurel.music.core.data.scanner.ScanStatus
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Song
 import com.aurel.music.core.ui.component.SongRow
@@ -114,32 +110,35 @@ fun HomeScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onNavigateToSearch) {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = AurelIcons.Search,
                             contentDescription = "Search shortcut",
-                            tint = AurelTheme.colors.primaryText
+                            tint = AurelTheme.colors.primaryText,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            imageVector = AurelIcons.Settings,
                             contentDescription = "Settings shortcut",
-                            tint = AurelTheme.colors.primaryText
+                            tint = AurelTheme.colors.primaryText,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
 
                     // Scan / Refresh Button
                     if (scanStatus is ScanStatus.Scanning) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(22.dp),
                             color = AurelTheme.colors.accent,
                             strokeWidth = 2.5.dp
                         )
                     } else {
                         IconButton(onClick = { viewModel.scanLibrary() }) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                imageVector = AurelIcons.Refresh,
                                 contentDescription = "Scan library",
-                                tint = AurelTheme.colors.primaryText
+                                tint = AurelTheme.colors.primaryText,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
@@ -187,7 +186,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MusicNote,
+                            imageVector = AurelIcons.MusicNote,
                             contentDescription = null,
                             tint = AurelTheme.colors.tertiaryText,
                             modifier = Modifier.size(64.dp)
@@ -323,7 +322,7 @@ private fun MostPlayedCard(
             )
             if (song.albumId <= 0L) {
                 Icon(
-                    imageVector = Icons.Default.MusicNote,
+                    imageVector = AurelIcons.MusicNote,
                     contentDescription = null,
                     tint = AurelTheme.colors.tertiaryText,
                     modifier = Modifier.size(36.dp)

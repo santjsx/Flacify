@@ -23,28 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Lyrics
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOne
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -77,6 +55,7 @@ import coil.compose.AsyncImage
 import com.aurel.music.core.audio.equalizer.EqualizerController
 import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.data.repository.PlaylistRepository
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.designsystem.theme.rememberArtworkBackgroundBrush
 import com.aurel.music.core.model.RepeatMode
@@ -212,7 +191,7 @@ fun NowPlayingScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
+                            imageVector = AurelIcons.ChevronDown,
                             contentDescription = "Dismiss Now Playing",
                             tint = AurelTheme.colors.primaryText,
                             modifier = Modifier.size(32.dp)
@@ -232,7 +211,7 @@ fun NowPlayingScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Timer,
+                            imageVector = AurelIcons.SleepTimer,
                             contentDescription = "Sleep timer",
                             tint = AurelTheme.colors.secondaryText,
                             modifier = Modifier.size(24.dp)
@@ -260,7 +239,7 @@ fun NowPlayingScreen(
                     )
                     if (song.albumId <= 0L) {
                         Icon(
-                            imageVector = Icons.Default.MusicNote,
+                            imageVector = AurelIcons.MusicNote,
                             contentDescription = null,
                             tint = AurelTheme.colors.tertiaryText,
                             modifier = Modifier.size(80.dp)
@@ -299,7 +278,7 @@ fun NowPlayingScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        imageVector = if (song.isFavorite) AurelIcons.HeartFilled else AurelIcons.HeartOutline,
                         contentDescription = if (song.isFavorite) "Remove ${song.title} from favorites" else "Add ${song.title} to favorites",
                         tint = if (song.isFavorite) AurelTheme.colors.accent else AurelTheme.colors.secondaryText,
                         modifier = Modifier.size(26.dp)
@@ -333,7 +312,7 @@ fun NowPlayingScreen(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SkipPrevious,
+                        imageVector = AurelIcons.SkipBack,
                         contentDescription = "Previous track",
                         tint = AurelTheme.colors.primaryText,
                         modifier = Modifier.size(36.dp)
@@ -353,7 +332,7 @@ fun NowPlayingScreen(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            imageVector = if (isPlaying) AurelIcons.Pause else AurelIcons.Play,
                             contentDescription = if (isPlaying) "Pause playback" else "Start playback",
                             tint = AurelTheme.colors.background,
                             modifier = Modifier.size(36.dp)
@@ -369,7 +348,7 @@ fun NowPlayingScreen(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SkipNext,
+                        imageVector = AurelIcons.SkipForward,
                         contentDescription = "Next track",
                         tint = AurelTheme.colors.primaryText,
                         modifier = Modifier.size(36.dp)
@@ -392,7 +371,7 @@ fun NowPlayingScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Shuffle,
+                        imageVector = AurelIcons.Shuffle,
                         contentDescription = "Toggle shuffle",
                         tint = if (shuffleMode == ShuffleMode.ON) AurelTheme.colors.accent else AurelTheme.colors.secondaryText
                     )
@@ -405,7 +384,7 @@ fun NowPlayingScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                        imageVector = if (repeatMode == RepeatMode.ONE) AurelIcons.RepeatOne else AurelIcons.Repeat,
                         contentDescription = "Toggle repeat",
                         tint = if (repeatMode != RepeatMode.OFF) AurelTheme.colors.accent else AurelTheme.colors.secondaryText
                     )
@@ -418,7 +397,7 @@ fun NowPlayingScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                        imageVector = AurelIcons.Queue,
                         contentDescription = "Open Up Next queue",
                         tint = AurelTheme.colors.secondaryText
                     )
@@ -431,7 +410,7 @@ fun NowPlayingScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Timer,
+                        imageVector = AurelIcons.SleepTimer,
                         contentDescription = "Sleep timer",
                         tint = AurelTheme.colors.secondaryText
                     )
@@ -445,7 +424,7 @@ fun NowPlayingScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreHoriz,
+                        imageVector = AurelIcons.More,
                         contentDescription = "More playback options",
                         tint = AurelTheme.colors.secondaryText
                     )
@@ -517,7 +496,7 @@ fun NowPlayingScreen(
                                     }
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Close,
+                                        imageVector = AurelIcons.Close,
                                         contentDescription = "Remove from queue",
                                         tint = AurelTheme.colors.tertiaryText,
                                         modifier = Modifier.size(18.dp)
@@ -550,7 +529,7 @@ fun NowPlayingScreen(
                     )
 
                     MoreActionRow(
-                        icon = Icons.Default.Lyrics,
+                        icon = AurelIcons.Lyrics,
                         title = "Synchronized Lyrics",
                         onClick = {
                             showMoreMenuSheet = false
@@ -558,7 +537,7 @@ fun NowPlayingScreen(
                         }
                     )
                     MoreActionRow(
-                        icon = Icons.Default.Equalizer,
+                        icon = AurelIcons.Equalizer,
                         title = "Audio Equalizer",
                         onClick = {
                             showMoreMenuSheet = false
@@ -566,7 +545,7 @@ fun NowPlayingScreen(
                         }
                     )
                     MoreActionRow(
-                        icon = Icons.Default.PlaylistAdd,
+                        icon = AurelIcons.PlaylistAdd,
                         title = "Add to Playlist",
                         onClick = {
                             showMoreMenuSheet = false
@@ -574,7 +553,7 @@ fun NowPlayingScreen(
                         }
                     )
                     MoreActionRow(
-                        icon = Icons.Default.Album,
+                        icon = AurelIcons.Album,
                         title = "Go to Album",
                         onClick = {
                             showMoreMenuSheet = false
@@ -582,7 +561,7 @@ fun NowPlayingScreen(
                         }
                     )
                     MoreActionRow(
-                        icon = Icons.Default.Person,
+                        icon = AurelIcons.Artist,
                         title = "Go to Artist",
                         onClick = {
                             showMoreMenuSheet = false
@@ -590,7 +569,7 @@ fun NowPlayingScreen(
                         }
                     )
                     MoreActionRow(
-                        icon = Icons.Default.Info,
+                        icon = AurelIcons.Info,
                         title = "Audio Information",
                         onClick = {
                             showMoreMenuSheet = false

@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -47,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.audio.timer.SleepTimerState
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -82,7 +80,7 @@ fun SleepTimerSheet(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Timer,
+                        imageVector = AurelIcons.SleepTimer,
                         contentDescription = null,
                         tint = AurelTheme.colors.accent,
                         modifier = Modifier.size(24.dp)
@@ -96,7 +94,7 @@ fun SleepTimerSheet(
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = AurelIcons.Close,
                         contentDescription = "Close",
                         tint = AurelTheme.colors.secondaryText
                     )

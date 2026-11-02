@@ -14,11 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -32,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Song
 
@@ -84,7 +80,7 @@ fun MiniPlayer(
                     )
                     if (currentSong.albumId <= 0L) {
                         Icon(
-                            imageVector = Icons.Default.MusicNote,
+                            imageVector = AurelIcons.MusicNote,
                             contentDescription = null,
                             tint = AurelTheme.colors.tertiaryText,
                             modifier = Modifier.size(20.dp)
@@ -120,7 +116,7 @@ fun MiniPlayer(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        imageVector = if (isPlaying) AurelIcons.Pause else AurelIcons.Play,
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = AurelTheme.colors.primaryText,
                         modifier = Modifier.size(26.dp)
@@ -133,7 +129,7 @@ fun MiniPlayer(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SkipNext,
+                        imageVector = AurelIcons.SkipForward,
                         contentDescription = "Next track",
                         tint = AurelTheme.colors.secondaryText,
                         modifier = Modifier.size(24.dp)

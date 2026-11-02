@@ -22,10 +22,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lyrics
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -47,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aurel.music.core.data.lyrics.Lyrics
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Song
 
@@ -111,7 +108,7 @@ fun LyricsScreen(
 
                 IconButton(onClick = onDismiss) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = AurelIcons.Close,
                         contentDescription = "Close lyrics",
                         tint = AurelTheme.colors.secondaryText,
                         modifier = Modifier.size(28.dp)
@@ -132,7 +129,7 @@ fun LyricsScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Lyrics,
+                            imageVector = AurelIcons.Lyrics,
                             contentDescription = null,
                             tint = AurelTheme.colors.tertiaryText,
                             modifier = Modifier.size(64.dp)
@@ -217,7 +214,7 @@ fun LyricsScreen(
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Sync,
+                    imageVector = AurelIcons.Refresh,
                     contentDescription = null,
                     tint = AurelTheme.colors.accent,
                     modifier = Modifier.size(18.dp)

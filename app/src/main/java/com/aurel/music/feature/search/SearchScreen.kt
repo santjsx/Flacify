@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -37,6 +34,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.ui.component.SongRow
 
@@ -107,7 +105,7 @@ fun SearchScreen(
             },
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Search,
+                    imageVector = AurelIcons.Search,
                     contentDescription = null,
                     tint = AurelTheme.colors.secondaryText
                 )
@@ -116,7 +114,7 @@ fun SearchScreen(
                 if (query.isNotEmpty()) {
                     IconButton(onClick = { viewModel.clearQuery() }) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
+                            imageVector = AurelIcons.Close,
                             contentDescription = "Clear search",
                             tint = AurelTheme.colors.secondaryText
                         )

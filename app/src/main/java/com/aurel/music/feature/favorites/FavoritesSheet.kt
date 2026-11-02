@@ -15,11 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.data.repository.SongRepository
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.ui.component.SongRow
 import kotlinx.coroutines.CoroutineScope
@@ -76,7 +72,7 @@ fun FavoritesSheet(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Favorite,
+                        imageVector = AurelIcons.HeartFilled,
                         contentDescription = null,
                         tint = AurelTheme.colors.accent,
                         modifier = Modifier.size(26.dp)
@@ -98,7 +94,7 @@ fun FavoritesSheet(
 
                 IconButton(onClick = onDismiss) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = AurelIcons.Close,
                         contentDescription = "Close",
                         tint = AurelTheme.colors.secondaryText
                     )
@@ -122,7 +118,7 @@ fun FavoritesSheet(
                         colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
                         shape = AurelTheme.shapes.small
                     ) {
-                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                        Icon(imageVector = AurelIcons.Play, contentDescription = null, tint = AurelTheme.colors.primaryText)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Play All", color = AurelTheme.colors.primaryText)
                     }
@@ -137,7 +133,7 @@ fun FavoritesSheet(
                         colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.surfaceVariant),
                         shape = AurelTheme.shapes.small
                     ) {
-                        Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                        Icon(imageVector = AurelIcons.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Shuffle", color = AurelTheme.colors.primaryText)
                     }
@@ -178,7 +174,7 @@ fun FavoritesSheet(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Favorite,
+                            imageVector = AurelIcons.HeartOutline,
                             contentDescription = null,
                             tint = AurelTheme.colors.tertiaryText,
                             modifier = Modifier.size(48.dp)

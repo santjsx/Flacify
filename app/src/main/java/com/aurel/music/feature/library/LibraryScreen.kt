@@ -21,14 +21,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -55,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Album
 import com.aurel.music.core.model.Artist
@@ -131,7 +124,7 @@ fun LibraryScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Sort,
+                            imageVector = AurelIcons.Sort,
                             contentDescription = "Sort library by ${sortOption.displayName}",
                             tint = AurelTheme.colors.primaryText
                         )
@@ -202,7 +195,7 @@ fun LibraryScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
                                     shape = AurelTheme.shapes.small
                                 ) {
-                                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                                    Icon(imageVector = AurelIcons.Play, contentDescription = null, tint = AurelTheme.colors.primaryText)
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(text = "Play All", color = AurelTheme.colors.primaryText)
                                 }
@@ -219,7 +212,7 @@ fun LibraryScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.surfaceVariant),
                                     shape = AurelTheme.shapes.small
                                 ) {
-                                    Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                                    Icon(imageVector = AurelIcons.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(text = "Shuffle", color = AurelTheme.colors.primaryText)
                                 }
@@ -407,7 +400,7 @@ private fun AlbumCard(
             )
             if (album.id <= 0L) {
                 Icon(
-                    imageVector = Icons.Default.Album,
+                    imageVector = AurelIcons.Album,
                     contentDescription = null,
                     tint = AurelTheme.colors.tertiaryText,
                     modifier = Modifier.size(48.dp)
@@ -452,7 +445,7 @@ private fun ArtistRow(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = AurelIcons.Artist,
                 contentDescription = null,
                 tint = AurelTheme.colors.tertiaryText,
                 modifier = Modifier.size(24.dp)
@@ -474,7 +467,7 @@ private fun ArtistRow(
             )
         }
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = AurelIcons.ChevronRight,
             contentDescription = null,
             tint = AurelTheme.colors.tertiaryText,
             modifier = Modifier.size(20.dp)
@@ -548,7 +541,7 @@ private fun AlbumDetailContent(
                         colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
                         shape = AurelTheme.shapes.small
                     ) {
-                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                        Icon(imageVector = AurelIcons.Play, contentDescription = null, tint = AurelTheme.colors.primaryText)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Play All", color = AurelTheme.colors.primaryText)
                     }
@@ -559,7 +552,7 @@ private fun AlbumDetailContent(
                         colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.surfaceVariant),
                         shape = AurelTheme.shapes.small
                     ) {
-                        Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                        Icon(imageVector = AurelIcons.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Shuffle", color = AurelTheme.colors.primaryText)
                     }
@@ -608,7 +601,7 @@ private fun ArtistDetailContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Person,
+                        imageVector = AurelIcons.Artist,
                         contentDescription = null,
                         tint = AurelTheme.colors.tertiaryText,
                         modifier = Modifier.size(54.dp)
@@ -637,7 +630,7 @@ private fun ArtistDetailContent(
                         colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.accent),
                         shape = AurelTheme.shapes.small
                     ) {
-                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                        Icon(imageVector = AurelIcons.Play, contentDescription = null, tint = AurelTheme.colors.primaryText)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Play All", color = AurelTheme.colors.primaryText)
                     }
@@ -648,7 +641,7 @@ private fun ArtistDetailContent(
                         colors = ButtonDefaults.buttonColors(containerColor = AurelTheme.colors.surfaceVariant),
                         shape = AurelTheme.shapes.small
                     ) {
-                        Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
+                        Icon(imageVector = AurelIcons.Shuffle, contentDescription = null, tint = AurelTheme.colors.primaryText)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Shuffle", color = AurelTheme.colors.primaryText)
                     }

@@ -15,18 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -49,6 +37,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurel.music.core.data.repository.ThemeMode
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 
 @Composable
@@ -94,7 +83,7 @@ fun MoreScreen(
         item {
             PreferenceGroup(title = "COLLECTIONS") {
                 PreferenceRow(
-                    icon = Icons.Default.Favorite,
+                    icon = AurelIcons.HeartFilled,
                     title = "Favorites",
                     subtitle = "Your liked songs",
                     onClick = {
@@ -103,7 +92,7 @@ fun MoreScreen(
                     }
                 )
                 PreferenceRow(
-                    icon = Icons.Default.QueueMusic,
+                    icon = AurelIcons.Queue,
                     title = "Playlists",
                     subtitle = "Custom track collections",
                     onClick = {
@@ -119,7 +108,7 @@ fun MoreScreen(
             Spacer(modifier = Modifier.height(16.dp))
             PreferenceGroup(title = "AUDIO & PLAYBACK") {
                 PreferenceRow(
-                    icon = Icons.Default.Equalizer,
+                    icon = AurelIcons.Equalizer,
                     title = "Equalizer",
                     subtitle = "Presets and hardware audio bands",
                     onClick = {
@@ -128,7 +117,7 @@ fun MoreScreen(
                     }
                 )
                 PreferenceRow(
-                    icon = Icons.Default.Timer,
+                    icon = AurelIcons.SleepTimer,
                     title = "Sleep Timer",
                     subtitle = "Automatically pause playback",
                     onClick = {
@@ -144,7 +133,7 @@ fun MoreScreen(
             Spacer(modifier = Modifier.height(16.dp))
             PreferenceGroup(title = "APPEARANCE") {
                 PreferenceRow(
-                    icon = Icons.Default.Palette,
+                    icon = AurelIcons.Palette,
                     title = "Theme",
                     subtitle = when (themeMode) {
                         ThemeMode.SYSTEM -> "System Default"
@@ -164,7 +153,7 @@ fun MoreScreen(
             Spacer(modifier = Modifier.height(16.dp))
             PreferenceGroup(title = "LIBRARY & STORAGE") {
                 PreferenceRow(
-                    icon = Icons.Default.Refresh,
+                    icon = AurelIcons.Refresh,
                     title = "Rescan Media Library",
                     subtitle = "Detect newly added or modified tracks",
                     onClick = {
@@ -173,7 +162,7 @@ fun MoreScreen(
                     }
                 )
                 PreferenceRow(
-                    icon = Icons.Default.Storage,
+                    icon = AurelIcons.Storage,
                     title = "Library Storage Info",
                     subtitle = "$songCount songs · $albumCount albums · $artistCount artists",
                     onClick = {
@@ -182,7 +171,7 @@ fun MoreScreen(
                     }
                 )
                 PreferenceRow(
-                    icon = Icons.Default.CleaningServices,
+                    icon = AurelIcons.Clean,
                     title = "Clear Artwork Cache",
                     subtitle = "Free image cache without deleting audio files",
                     onClick = {
@@ -199,7 +188,7 @@ fun MoreScreen(
             Spacer(modifier = Modifier.height(16.dp))
             PreferenceGroup(title = "UPDATES & ABOUT") {
                 PreferenceRow(
-                    icon = Icons.Default.SystemUpdate,
+                    icon = AurelIcons.Update,
                     title = "Check for Updates",
                     subtitle = "GitHub Releases distribution",
                     onClick = {
@@ -208,7 +197,7 @@ fun MoreScreen(
                     }
                 )
                 PreferenceRow(
-                    icon = Icons.Default.Info,
+                    icon = AurelIcons.Info,
                     title = "About AUREL",
                     subtitle = "Version 1.0.0 · Offline-first player",
                     onClick = {
@@ -460,7 +449,7 @@ private fun PreferenceRow(
             )
         }
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = AurelIcons.ChevronRight,
             contentDescription = null,
             tint = AurelTheme.colors.tertiaryText,
             modifier = Modifier.size(20.dp)

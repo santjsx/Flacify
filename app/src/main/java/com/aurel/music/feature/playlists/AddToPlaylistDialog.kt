@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurel.music.core.data.repository.PlaylistRepository
+import com.aurel.music.core.designsystem.icon.AurelIcons
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.model.Song
 import kotlinx.coroutines.CoroutineScope
@@ -78,7 +75,7 @@ fun AddToPlaylistSheet(
                     color = AurelTheme.colors.primaryText
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = AurelTheme.colors.secondaryText)
+                    Icon(imageVector = AurelIcons.Close, contentDescription = "Close", tint = AurelTheme.colors.secondaryText)
                 }
             }
 
@@ -97,7 +94,7 @@ fun AddToPlaylistSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    imageVector = AurelIcons.Add,
                     contentDescription = null,
                     tint = AurelTheme.colors.accent,
                     modifier = Modifier.size(24.dp)
@@ -127,7 +124,7 @@ fun AddToPlaylistSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.QueueMusic,
+                            imageVector = AurelIcons.Queue,
                             contentDescription = null,
                             tint = AurelTheme.colors.secondaryText,
                             modifier = Modifier.size(24.dp)
