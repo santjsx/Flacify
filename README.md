@@ -22,9 +22,15 @@
 
 <div align="center">
 
-| Home | Now Playing | Library | Search | Settings |
-|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/01_home.png" width="180" /> | <img src="docs/screenshots/02_now_playing.png" width="180" /> | <img src="docs/screenshots/03_library.png" width="180" /> | <img src="docs/screenshots/04_search.png" width="180" /> | <img src="docs/screenshots/05_more.png" width="180" /> |
+| Home | Songs | Albums | Artists |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/home.png" width="200" alt="Home Dashboard" /> | <img src="docs/screenshots/songs.png" width="200" alt="Songs List" /> | <img src="docs/screenshots/albums.png" width="200" alt="Albums Grid" /> | <img src="docs/screenshots/artists.png" width="200" alt="Artists View" /> |
+
+<br/>
+
+| Playlists | Search | Settings |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/playlists.png" width="200" alt="Playlists" /> | <img src="docs/screenshots/search.png" width="200" alt="Search & Filtering" /> | <img src="docs/screenshots/settings.png" width="200" alt="Settings & Equalizer" /> |
 
 </div>
 
@@ -88,7 +94,7 @@ FLACify
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/flacify.git
+git clone https://github.com/santjsx/Flacify.git
 cd flacify
 ```
 
@@ -122,4 +128,3 @@ You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
 ```
-
