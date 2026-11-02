@@ -6,6 +6,8 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.data.repository.SongRepository
+import com.aurel.music.core.model.Album
+import com.aurel.music.core.model.Artist
 import com.aurel.music.core.model.Song
 import com.aurel.music.core.model.SortOption
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -46,6 +49,32 @@ class LibraryViewModel @Inject constructor(
     val artistCount = songRepository.getArtistCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val albums: StateFlow<List<Album>> = songRepository.getAllAlbums()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val artists: StateFlow<List<Artist>> = songRepository.getAllArtists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedAlbum = MutableStateFlow<Album?>(null)
+    val selectedAlbum: StateFlow<Album?> = _selectedAlbum.asStateFlow()
+
+    val selectedAlbumSongs: StateFlow<List<Song>> = _selectedAlbum
+        .flatMapLatest { album ->
+            if (album != null) songRepository.getSongsByAlbum(album.id)
+            else flowOf(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedArtist = MutableStateFlow<Artist?>(null)
+    val selectedArtist: StateFlow<Artist?> = _selectedArtist.asStateFlow()
+
+    val selectedArtistSongs: StateFlow<List<Song>> = _selectedArtist
+        .flatMapLatest { artist ->
+            if (artist != null) songRepository.getSongsByArtist(artist.id)
+            else flowOf(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val currentPlayingSong = playbackRepository.currentSong
     val isPlaying = playbackRepository.isPlaying
 
@@ -63,8 +92,23 @@ class LibraryViewModel @Inject constructor(
         _sortOption.value = sort
     }
 
+    fun selectAlbum(album: Album?) {
+        _selectedAlbum.value = album
+    }
+
+    fun selectArtist(artist: Artist?) {
+        _selectedArtist.value = artist
+    }
+
     fun playSong(song: Song) {
         playbackRepository.playSong(song)
+    }
+
+    fun playQueue(songs: List<Song>, startIndex: Int = 0) {
+        if (songs.isNotEmpty()) {
+            val songToPlay = songs.getOrElse(startIndex) { songs.first() }
+            playbackRepository.playSong(songToPlay, songs)
+        }
     }
 
     fun toggleFavorite(song: Song) {

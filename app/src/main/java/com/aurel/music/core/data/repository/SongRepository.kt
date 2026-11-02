@@ -7,9 +7,12 @@ import androidx.paging.map
 import com.aurel.music.core.data.scanner.MediaStoreScanner
 import com.aurel.music.core.data.scanner.ScanStatus
 import com.aurel.music.core.database.dao.SongDao
+import com.aurel.music.core.model.Album
+import com.aurel.music.core.model.Artist
 import com.aurel.music.core.model.Song
 import com.aurel.music.core.model.SortOption
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,6 +22,10 @@ interface SongRepository {
     fun getSongCount(): Flow<Int>
     fun getAlbumCount(): Flow<Int>
     fun getArtistCount(): Flow<Int>
+    fun getAllAlbums(): Flow<List<Album>>
+    fun getAllArtists(): Flow<List<Artist>>
+    fun getSongsByAlbum(albumId: Long): Flow<List<Song>>
+    fun getSongsByArtist(artistId: Long): Flow<List<Song>>
     fun getRecentlyAddedSongs(): Flow<List<Song>>
     fun getMostPlayedSongs(): Flow<List<Song>>
     fun getFavoriteSongs(): Flow<List<Song>>
@@ -31,7 +38,8 @@ interface SongRepository {
 @Singleton
 class SongRepositoryImpl @Inject constructor(
     private val songDao: SongDao,
-    private val scanner: MediaStoreScanner
+    private val scanner: MediaStoreScanner,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : SongRepository {
 
     override fun getSongsPaged(sortOption: SortOption): Flow<PagingData<Song>> {
@@ -64,6 +72,18 @@ class SongRepositoryImpl @Inject constructor(
 
     override fun getArtistCount(): Flow<Int> = songDao.getArtistCount()
 
+    override fun getAllAlbums(): Flow<List<Album>> =
+        songDao.getAllAlbums().map { list -> list.map { it.toDomain() } }
+
+    override fun getAllArtists(): Flow<List<Artist>> =
+        songDao.getAllArtists().map { list -> list.map { it.toDomain() } }
+
+    override fun getSongsByAlbum(albumId: Long): Flow<List<Song>> =
+        songDao.getSongsByAlbum(albumId).map { list -> list.map { it.toDomain() } }
+
+    override fun getSongsByArtist(artistId: Long): Flow<List<Song>> =
+        songDao.getSongsByArtist(artistId).map { list -> list.map { it.toDomain() } }
+
     override fun getRecentlyAddedSongs(): Flow<List<Song>> =
         songDao.getRecentlyAddedSongs().map { list -> list.map { it.toDomain() } }
 
@@ -86,7 +106,8 @@ class SongRepositoryImpl @Inject constructor(
     }
 
     override suspend fun scanLibrary(): ScanStatus {
-        return scanner.scanLibrary()
+        val minSec = userPreferencesRepository.minTrackDurationSec.first()
+        return scanner.scanLibrary(minDurationMs = minSec * 1000L)
     }
 }
 

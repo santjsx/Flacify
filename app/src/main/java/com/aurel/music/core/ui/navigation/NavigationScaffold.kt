@@ -47,6 +47,7 @@ import com.aurel.music.feature.home.HomeViewModel
 import com.aurel.music.feature.library.LibraryScreen
 import com.aurel.music.feature.library.LibraryViewModel
 import com.aurel.music.feature.more.MoreScreen
+import com.aurel.music.feature.more.MoreViewModel
 import com.aurel.music.feature.nowplaying.NowPlayingScreen
 import com.aurel.music.feature.nowplaying.NowPlayingViewModel
 import com.aurel.music.feature.search.SearchScreen
@@ -79,6 +80,7 @@ fun NavigationScaffold(
     val libraryViewModel: LibraryViewModel = hiltViewModel()
     val searchViewModel: SearchViewModel = hiltViewModel()
     val nowPlayingViewModel: NowPlayingViewModel = hiltViewModel()
+    val moreViewModel: MoreViewModel = hiltViewModel()
 
     Box(modifier = modifier.fillMaxSize().background(AurelTheme.colors.background)) {
         Scaffold(
@@ -154,6 +156,7 @@ fun NavigationScaffold(
                         viewModel = searchViewModel
                     )
                     NavigationDestination.MORE -> MoreScreen(
+                        viewModel = moreViewModel,
                         onRescanClick = { homeViewModel.scanLibrary() },
                         onEqualizerClick = { isMoreEqualizerOpen = true },
                         onSleepTimerClick = { isMoreSleepTimerOpen = true }

@@ -1,7 +1,5 @@
 package com.aurel.music.feature.nowplaying
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,12 +12,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ClearAll
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -35,12 +34,14 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,7 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,6 +62,7 @@ import coil.compose.AsyncImage
 import com.aurel.music.core.audio.equalizer.EqualizerController
 import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.designsystem.theme.AurelTheme
+import com.aurel.music.core.designsystem.theme.rememberArtworkBackgroundBrush
 import com.aurel.music.core.model.RepeatMode
 import com.aurel.music.core.model.ShuffleMode
 import com.aurel.music.core.ui.component.HighPrecisionScrubber
@@ -77,6 +81,7 @@ fun NowPlayingScreen(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
@@ -86,6 +91,7 @@ fun NowPlayingScreen(
     val queue by viewModel.queue.collectAsStateWithLifecycle()
 
     var showQueueSheet by remember { mutableStateOf(false) }
+    var showClearQueueDialog by remember { mutableStateOf(false) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showEqualizerSheet by remember { mutableStateOf(false) }
     var showLyricsScreen by remember { mutableStateOf(false) }
@@ -96,11 +102,17 @@ fun NowPlayingScreen(
     }
 
     val song = currentSong!!
+    val backgroundBrush = rememberArtworkBackgroundBrush(
+        artworkUri = "content://media/external/audio/albumart/${song.albumId}",
+        backgroundColor = AurelTheme.colors.background,
+        isDarkTheme = AurelTheme.colors.isDark
+    )
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(AurelTheme.colors.background)
+            .background(backgroundBrush)
             .systemBarsPadding()
     ) {
         Column(
@@ -118,10 +130,15 @@ fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDismiss) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onDismiss()
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Dismiss",
+                        contentDescription = "Dismiss Now Playing",
                         tint = AurelTheme.colors.primaryText,
                         modifier = Modifier.size(32.dp)
                     )
@@ -133,7 +150,12 @@ fun NowPlayingScreen(
                     color = AurelTheme.colors.secondaryText
                 )
 
-                IconButton(onClick = { showSleepTimerSheet = true }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showSleepTimerSheet = true
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Timer,
                         contentDescription = "Sleep timer",
@@ -157,7 +179,7 @@ fun NowPlayingScreen(
             ) {
                 AsyncImage(
                     model = "content://media/external/audio/albumart/${song.albumId}",
-                    contentDescription = "${song.title} artwork",
+                    contentDescription = "${song.title} album artwork",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -194,21 +216,29 @@ fun NowPlayingScreen(
                     )
                 }
 
-                IconButton(onClick = { viewModel.toggleFavorite(song) }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.toggleFavorite(song)
+                    }
+                ) {
                     Icon(
                         imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (song.isFavorite) "Remove from favorites" else "Add to favorites",
+                        contentDescription = if (song.isFavorite) "Remove ${song.title} from favorites" else "Add ${song.title} to favorites",
                         tint = if (song.isFavorite) AurelTheme.colors.accent else AurelTheme.colors.secondaryText,
                         modifier = Modifier.size(26.dp)
                     )
                 }
             }
 
-            // 4. Playback Scrubber
+            // 4. Playback Scrubber (4dp resting, 44dp touch target, -remaining time)
             HighPrecisionScrubber(
                 currentPositionMs = currentPositionMs,
                 durationMs = durationMs,
-                onSeek = { viewModel.seekTo(it) }
+                onSeek = { seekTargetMs ->
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    viewModel.seekTo(seekTargetMs)
+                }
             )
 
             // 5. Primary Transport Controls (Prev, 72dp Play/Pause, Next)
@@ -220,12 +250,15 @@ fun NowPlayingScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { viewModel.skipToPrevious() },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.skipToPrevious()
+                    },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
-                        contentDescription = "Previous",
+                        contentDescription = "Previous track",
                         tint = AurelTheme.colors.primaryText,
                         modifier = Modifier.size(36.dp)
                     )
@@ -233,7 +266,10 @@ fun NowPlayingScreen(
 
                 // Prominent Play/Pause 72dp button
                 Surface(
-                    onClick = { viewModel.togglePlayPause() },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.togglePlayPause()
+                    },
                     shape = CircleShape,
                     color = AurelTheme.colors.primaryText,
                     modifier = Modifier.size(72.dp),
@@ -242,7 +278,7 @@ fun NowPlayingScreen(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            contentDescription = if (isPlaying) "Pause playback" else "Start playback",
                             tint = AurelTheme.colors.background,
                             modifier = Modifier.size(36.dp)
                         )
@@ -250,12 +286,15 @@ fun NowPlayingScreen(
                 }
 
                 IconButton(
-                    onClick = { viewModel.skipToNext() },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.skipToNext()
+                    },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next",
+                        contentDescription = "Next track",
                         tint = AurelTheme.colors.primaryText,
                         modifier = Modifier.size(36.dp)
                     )
@@ -270,82 +309,174 @@ fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { viewModel.toggleShuffle() }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.toggleShuffle()
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Shuffle,
-                        contentDescription = "Shuffle",
+                        contentDescription = "Toggle shuffle",
                         tint = if (shuffleMode == ShuffleMode.ON) AurelTheme.colors.accent else AurelTheme.colors.secondaryText
                     )
                 }
 
-                IconButton(onClick = { viewModel.toggleRepeat() }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.toggleRepeat()
+                    }
+                ) {
                     Icon(
                         imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                        contentDescription = "Repeat",
+                        contentDescription = "Toggle repeat",
                         tint = if (repeatMode != RepeatMode.OFF) AurelTheme.colors.accent else AurelTheme.colors.secondaryText
                     )
                 }
 
-                IconButton(onClick = { showLyricsScreen = true }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showLyricsScreen = true
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Lyrics,
-                        contentDescription = "Lyrics",
+                        contentDescription = "View synchronized lyrics",
                         tint = AurelTheme.colors.secondaryText
                     )
                 }
 
-                IconButton(onClick = { showEqualizerSheet = true }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showEqualizerSheet = true
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Equalizer,
-                        contentDescription = "Equalizer",
+                        contentDescription = "Open audio equalizer",
                         tint = AurelTheme.colors.secondaryText
                     )
                 }
 
-                IconButton(onClick = { showQueueSheet = true }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showQueueSheet = true
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.QueueMusic,
-                        contentDescription = "Queue",
+                        contentDescription = "Open Up Next queue",
                         tint = AurelTheme.colors.secondaryText
                     )
                 }
             }
         }
 
-        // Up Next Queue Bottom Sheet
+        // Up Next Queue Bottom Sheet with Reordering / Removal & Clear Queue Confirmation
         if (showQueueSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showQueueSheet = false },
                 containerColor = AurelTheme.colors.surfaceElevated,
-                sheetState = rememberModalBottomSheetState()
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        text = "Up Next (${queue.size} tracks)",
-                        style = AurelTheme.typography.sectionTitle,
-                        color = AurelTheme.colors.primaryText,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Up Next (${queue.size} tracks)",
+                            style = AurelTheme.typography.sectionTitle,
+                            color = AurelTheme.colors.primaryText
+                        )
+
+                        if (queue.isNotEmpty()) {
+                            TextButton(
+                                onClick = { showClearQueueDialog = true }
+                            ) {
+                                Text(
+                                    text = "Clear",
+                                    color = AurelTheme.colors.error,
+                                    style = AurelTheme.typography.primaryContentBold
+                                )
+                            }
+                        }
+                    }
 
                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                        items(queue, key = { it.id }) { queueSong ->
-                            SongRow(
-                                song = queueSong,
-                                isPlaying = song.id == queueSong.id && isPlaying,
-                                onClick = {
-                                    viewModel.playQueueItem(queueSong)
-                                    showQueueSheet = false
-                                },
-                                onMoreClick = {}
-                            )
+                        itemsIndexed(queue, key = { index, item -> "${item.id}_$index" }) { index, queueSong ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SongRow(
+                                        song = queueSong,
+                                        isPlaying = song.id == queueSong.id && isPlaying,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.playQueueItem(queueSong)
+                                            showQueueSheet = false
+                                        },
+                                        onMoreClick = {}
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        viewModel.removeFromQueue(index)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Remove from queue",
+                                        tint = AurelTheme.colors.tertiaryText,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+
+        // Clear Queue Confirmation Dialog (PRD Section 6.1)
+        if (showClearQueueDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearQueueDialog = false },
+                title = { Text(text = "Clear Queue?", color = AurelTheme.colors.primaryText) },
+                text = { Text(text = "This will remove all upcoming tracks from your queue.", color = AurelTheme.colors.secondaryText) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.clearQueue()
+                            showClearQueueDialog = false
+                        }
+                    ) {
+                        Text(text = "Clear", color = AurelTheme.colors.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearQueueDialog = false }) {
+                        Text(text = "Cancel", color = AurelTheme.colors.primaryText)
+                    }
+                },
+                containerColor = AurelTheme.colors.surfaceElevated
+            )
         }
 
         // Sleep Timer Sheet
@@ -370,10 +501,12 @@ fun NowPlayingScreen(
                 song = song,
                 currentPositionMs = currentPositionMs,
                 lyrics = null, // Will parse local LRC if present
-                onSeek = { viewModel.seekTo(it) },
+                onSeek = { seekPosMs ->
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    viewModel.seekTo(seekPosMs)
+                },
                 onDismiss = { showLyricsScreen = false }
             )
         }
     }
 }
-

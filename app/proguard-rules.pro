@@ -20,3 +20,19 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
+# Retrofit & OkHttp
+-dontwarn retrofit2.**
+-keep class retrofit2.** { *; }
+-keepattributes Signature, Exceptions
+-keepclassmembers class * {
+    @retrofit2.http.* <methods>;
+}
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# Dagger Hilt & ViewModel
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+
+

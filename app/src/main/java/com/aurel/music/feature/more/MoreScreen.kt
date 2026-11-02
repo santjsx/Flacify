@@ -1,5 +1,6 @@
 package com.aurel.music.feature.more
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,32 +17,61 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.Divider
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aurel.music.core.data.repository.ThemeMode
 import com.aurel.music.core.designsystem.theme.AurelTheme
 
 @Composable
 fun MoreScreen(
+    viewModel: MoreViewModel,
     onRescanClick: () -> Unit,
     onEqualizerClick: () -> Unit = {},
     onSleepTimerClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val minDuration by viewModel.minTrackDurationSec.collectAsStateWithLifecycle()
+    val songCount by viewModel.songCount.collectAsStateWithLifecycle()
+    val albumCount by viewModel.albumCount.collectAsStateWithLifecycle()
+    val artistCount by viewModel.artistCount.collectAsStateWithLifecycle()
+    val updateState by viewModel.updateUiState.collectAsStateWithLifecycle()
+
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showStorageDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -58,68 +88,314 @@ fun MoreScreen(
             )
         }
 
-        // Section: Library & Collections
+        // Section 1: Collections
         item {
             PreferenceGroup(title = "COLLECTIONS") {
                 PreferenceRow(
                     icon = Icons.Default.Favorite,
                     title = "Favorites",
                     subtitle = "Your liked songs",
-                    onClick = {}
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
                 )
                 PreferenceRow(
                     icon = Icons.Default.QueueMusic,
                     title = "Playlists",
                     subtitle = "Custom track collections",
-                    onClick = {}
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
                 )
             }
         }
 
-        // Section: Audio & Playback
+        // Section 2: Audio & Playback
         item {
             Spacer(modifier = Modifier.height(16.dp))
             PreferenceGroup(title = "AUDIO & PLAYBACK") {
                 PreferenceRow(
                     icon = Icons.Default.Equalizer,
                     title = "Equalizer",
-                    subtitle = "Presets and custom audio bands",
-                    onClick = onEqualizerClick
+                    subtitle = "Presets and hardware audio bands",
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onEqualizerClick()
+                    }
                 )
                 PreferenceRow(
                     icon = Icons.Default.Timer,
                     title = "Sleep Timer",
                     subtitle = "Automatically pause playback",
-                    onClick = onSleepTimerClick
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onSleepTimerClick()
+                    }
                 )
             }
         }
 
-        // Section: System & Library Management
+        // Section 3: Appearance & Theme
         item {
             Spacer(modifier = Modifier.height(16.dp))
-            PreferenceGroup(title = "SYSTEM & PREFERENCES") {
+            PreferenceGroup(title = "APPEARANCE") {
+                PreferenceRow(
+                    icon = Icons.Default.Palette,
+                    title = "Theme",
+                    subtitle = when (themeMode) {
+                        ThemeMode.SYSTEM -> "System Default"
+                        ThemeMode.DARK -> "Dark (Charcoal)"
+                        ThemeMode.LIGHT -> "Light (Warm Off-white)"
+                    },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showThemeDialog = true
+                    }
+                )
+            }
+        }
+
+        // Section 4: Library & Storage (PRD Section 12)
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            PreferenceGroup(title = "LIBRARY & STORAGE") {
                 PreferenceRow(
                     icon = Icons.Default.Refresh,
                     title = "Rescan Media Library",
-                    subtitle = "Index new local tracks from MediaStore",
-                    onClick = onRescanClick
+                    subtitle = "Detect newly added or modified tracks",
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onRescanClick()
+                    }
                 )
                 PreferenceRow(
-                    icon = Icons.Default.Palette,
-                    title = "Appearance",
-                    subtitle = "Dark, Light, System themes",
-                    onClick = {}
+                    icon = Icons.Default.Storage,
+                    title = "Library Storage Info",
+                    subtitle = "$songCount songs · $albumCount albums · $artistCount artists",
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showStorageDialog = true
+                    }
+                )
+                PreferenceRow(
+                    icon = Icons.Default.CleaningServices,
+                    title = "Clear Artwork Cache",
+                    subtitle = "Free image cache without deleting audio files",
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.clearArtworkCache(context)
+                        Toast.makeText(context, "Artwork cache cleared", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }
+
+        // Section 5: Updates & About (PRD Section 13)
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            PreferenceGroup(title = "UPDATES & ABOUT") {
+                PreferenceRow(
+                    icon = Icons.Default.SystemUpdate,
+                    title = "Check for Updates",
+                    subtitle = "GitHub Releases distribution",
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.checkForUpdates()
+                    }
                 )
                 PreferenceRow(
                     icon = Icons.Default.Info,
                     title = "About AUREL",
                     subtitle = "Version 1.0.0 · Offline-first player",
-                    onClick = {}
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showAboutDialog = true
+                    }
                 )
             }
             Spacer(modifier = Modifier.height(120.dp))
         }
+    }
+
+    // Theme Selection Dialog (PRD Section 12)
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text(text = "Appearance", color = AurelTheme.colors.primaryText) },
+            text = {
+                Column {
+                    ThemeMode.entries.forEach { mode ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    viewModel.setThemeMode(mode)
+                                    showThemeDialog = false
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = themeMode == mode,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    viewModel.setThemeMode(mode)
+                                    showThemeDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = AurelTheme.colors.accent)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = when (mode) {
+                                    ThemeMode.SYSTEM -> "System Default"
+                                    ThemeMode.DARK -> "Dark (Charcoal)"
+                                    ThemeMode.LIGHT -> "Light (Off-white)"
+                                },
+                                color = AurelTheme.colors.primaryText,
+                                style = AurelTheme.typography.primaryContent
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text("Close", color = AurelTheme.colors.accent)
+                }
+            },
+            containerColor = AurelTheme.colors.surfaceElevated
+        )
+    }
+
+    // Storage Info Dialog (PRD Section 12)
+    if (showStorageDialog) {
+        AlertDialog(
+            onDismissRequest = { showStorageDialog = false },
+            title = { Text(text = "Library Information", color = AurelTheme.colors.primaryText) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Indexed Songs: $songCount", color = AurelTheme.colors.secondaryText)
+                    Text(text = "Unique Albums: $albumCount", color = AurelTheme.colors.secondaryText)
+                    Text(text = "Unique Artists: $artistCount", color = AurelTheme.colors.secondaryText)
+                    Text(
+                        text = "Minimum track duration: $minDuration seconds (filters out ringtones and short clips)",
+                        color = AurelTheme.colors.secondaryText,
+                        style = AurelTheme.typography.secondaryContent
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showStorageDialog = false }) {
+                    Text("OK", color = AurelTheme.colors.accent)
+                }
+            },
+            containerColor = AurelTheme.colors.surfaceElevated
+        )
+    }
+
+    // About AUREL Dialog
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { Text(text = "AUREL Music Player", color = AurelTheme.colors.primaryText) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(text = "Version 1.0.0 (Build 100)", color = AurelTheme.colors.primaryText, style = AurelTheme.typography.primaryContentBold)
+                    Text(text = "A minimalist, offline-first Android audio player engineered for clarity, fluidity, and audiophile-grade fidelity.", color = AurelTheme.colors.secondaryText)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "Target library: 50,000+ local tracks with Room Paging 3 and foreground Media3 background playback service.", color = AurelTheme.colors.tertiaryText, style = AurelTheme.typography.metadata)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutDialog = false }) {
+                    Text("Close", color = AurelTheme.colors.accent)
+                }
+            },
+            containerColor = AurelTheme.colors.surfaceElevated
+        )
+    }
+
+    // GitHub Updates Dialog (PRD Section 13)
+    when (val state = updateState) {
+        is UpdateUiState.Checking -> {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(text = "Checking for Updates...", color = AurelTheme.colors.primaryText) },
+                text = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(color = AurelTheme.colors.accent)
+                    }
+                },
+                confirmButton = {},
+                containerColor = AurelTheme.colors.surfaceElevated
+            )
+        }
+
+        is UpdateUiState.Available -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissUpdateDialog() },
+                title = { Text(text = "A new version is available", color = AurelTheme.colors.primaryText) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Version ${state.version}", style = AurelTheme.typography.primaryContentBold, color = AurelTheme.colors.accent)
+                        Text(text = state.releaseNotes, color = AurelTheme.colors.secondaryText)
+                        val sizeMb = "%.1f".format(state.sizeBytes / (1024.0 * 1024.0))
+                        Text(text = "Download size: $sizeMb MB", style = AurelTheme.typography.metadata, color = AurelTheme.colors.tertiaryText)
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.dismissUpdateDialog()
+                            Toast.makeText(context, "Initiating update download...", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text(text = "Update Now", color = AurelTheme.colors.accent)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
+                        Text(text = "Later", color = AurelTheme.colors.primaryText)
+                    }
+                },
+                containerColor = AurelTheme.colors.surfaceElevated
+            )
+        }
+
+        is UpdateUiState.UpToDate -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissUpdateDialog() },
+                title = { Text(text = "AUREL is Up to Date", color = AurelTheme.colors.primaryText) },
+                text = { Text(text = "You are on the latest version (${state.version}).", color = AurelTheme.colors.secondaryText) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
+                        Text(text = "OK", color = AurelTheme.colors.accent)
+                    }
+                },
+                containerColor = AurelTheme.colors.surfaceElevated
+            )
+        }
+
+        is UpdateUiState.Error -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissUpdateDialog() },
+                title = { Text(text = "Update Check Failed", color = AurelTheme.colors.error) },
+                text = { Text(text = state.message, color = AurelTheme.colors.secondaryText) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
+                        Text(text = "OK", color = AurelTheme.colors.primaryText)
+                    }
+                },
+                containerColor = AurelTheme.colors.surfaceElevated
+            )
+        }
+
+        UpdateUiState.Idle -> { /* Nothing */ }
     }
 }
 
@@ -187,4 +463,3 @@ private fun PreferenceRow(
         )
     }
 }
-

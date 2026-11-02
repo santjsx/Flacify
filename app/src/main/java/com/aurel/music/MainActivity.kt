@@ -8,16 +8,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.aurel.music.core.audio.equalizer.EqualizerController
 import com.aurel.music.core.audio.timer.SleepTimerManager
 import com.aurel.music.core.data.repository.PlaybackRepository
 import com.aurel.music.core.data.repository.SongRepository
+import com.aurel.music.core.data.repository.ThemeMode
+import com.aurel.music.core.data.repository.UserPreferencesRepository
 import com.aurel.music.core.designsystem.theme.AurelTheme
 import com.aurel.music.core.ui.navigation.NavigationScaffold
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,6 +45,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var equalizerController: EqualizerController
 
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -61,7 +69,14 @@ class MainActivity : ComponentActivity() {
         requestRequiredPermissions()
 
         setContent {
-            AurelTheme {
+            val themeMode by userPreferencesRepository.themeMode.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+            val isDark = when (themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+            }
+
+            AurelTheme(darkTheme = isDark) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     contentWindowInsets = WindowInsets(0, 0, 0, 0)

@@ -60,5 +60,13 @@ class NowPlayingViewModel @Inject constructor(
     fun playQueueItem(song: Song) {
         playbackRepository.playSong(song, queue.value)
     }
+
+    fun removeFromQueue(index: Int) {
+        playbackRepository.removeFromQueue(index)
+    }
+
+    fun clearQueue() {
+        playbackRepository.clearQueue()
+    }
 }
 
