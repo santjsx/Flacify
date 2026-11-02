@@ -1,5 +1,6 @@
 package com.aurel.music.feature.search
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +59,11 @@ fun SearchScreen(
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
     var selectedFilter by remember { mutableStateOf(SearchFilter.ALL) }
+
+    // Intercept system Back to clear active search query before exiting/navigating away
+    BackHandler(enabled = query.isNotEmpty()) {
+        viewModel.clearQuery()
+    }
 
     val filteredResults = remember(results, selectedFilter, query) {
         if (selectedFilter == SearchFilter.ALL) results

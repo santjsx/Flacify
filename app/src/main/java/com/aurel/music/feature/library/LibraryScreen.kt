@@ -1,5 +1,6 @@
 package com.aurel.music.feature.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -84,6 +85,11 @@ fun LibraryScreen(
     val pagedSongs = viewModel.pagedSongs.collectAsLazyPagingItems()
 
     var isSortMenuExpanded by remember { mutableStateOf(false) }
+
+    // Intercept system Back when viewing Albums or Artists tab to return to Songs tab first
+    BackHandler(enabled = selectedTab != LibraryTab.SONGS && selectedAlbum == null && selectedArtist == null) {
+        viewModel.selectTab(LibraryTab.SONGS)
+    }
 
     Column(
         modifier = modifier

@@ -1,5 +1,6 @@
 package com.aurel.music.feature.lyrics
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -60,6 +61,11 @@ fun LyricsScreen(
 ) {
     val listState = rememberLazyListState()
     var isUserScrolling by remember { mutableStateOf(false) }
+
+    // Intercept system Back gesture and 3-button back to dismiss lyrics
+    BackHandler(enabled = true) {
+        onDismiss()
+    }
 
     val activeIndex = lyrics?.findActiveLineIndex(currentPositionMs) ?: -1
 

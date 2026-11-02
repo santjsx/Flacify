@@ -1,6 +1,13 @@
 package com.aurel.music.core.ui.navigation
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -9,7 +16,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
@@ -19,17 +25,21 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,12 +82,50 @@ fun NavigationScaffold(
     equalizerController: EqualizerController,
     modifier: Modifier = Modifier
 ) {
-    var currentDestination by remember { mutableStateOf(NavigationDestination.HOME) }
+    // Navigation Destination Stack: Maintains tab history with HOME as the persistent root
+    val destinationStack = remember { mutableStateListOf(NavigationDestination.HOME) }
+    val currentDestination = destinationStack.lastOrNull() ?: NavigationDestination.HOME
+
+    fun navigateTo(destination: NavigationDestination) {
+        if (destination == NavigationDestination.HOME) {
+            destinationStack.clear()
+            destinationStack.add(NavigationDestination.HOME)
+        } else if (currentDestination != destination) {
+            destinationStack.remove(destination)
+            destinationStack.add(destination)
+        }
+    }
+
     var isNowPlayingOpen by remember { mutableStateOf(false) }
     var isMoreSleepTimerOpen by remember { mutableStateOf(false) }
     var isMoreEqualizerOpen by remember { mutableStateOf(false) }
     var isFavoritesOpen by remember { mutableStateOf(false) }
     var isPlaylistsOpen by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    var lastBackPressTime by remember { mutableLongStateOf(0L) }
+
+    // Navigation Back Handling:
+    // 1. If Now Playing is open, back gesture / 3-button back dismisses Now Playing
+    BackHandler(enabled = isNowPlayingOpen) {
+        isNowPlayingOpen = false
+    }
+
+    // 2. If on secondary tab (Library, Search, More), back gesture / 3-button back navigates to previous tab / Home
+    BackHandler(enabled = !isNowPlayingOpen && destinationStack.size > 1) {
+        destinationStack.removeAt(destinationStack.lastIndex)
+    }
+
+    // 3. On root Home tab, double-back confirmation within 2s protects against accidental app exits during gesture navigation
+    BackHandler(enabled = !isNowPlayingOpen && destinationStack.size <= 1) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastBackPressTime < 2000L) {
+            (context as? Activity)?.finish()
+        } else {
+            lastBackPressTime = currentTime
+            Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val currentSong by playbackRepository.currentSong.collectAsStateWithLifecycle()
     val isPlaying by playbackRepository.isPlaying.collectAsStateWithLifecycle()
@@ -93,9 +141,7 @@ fun NavigationScaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     // MiniPlayer floats directly above the Navigation Bar
                     MiniPlayer(
@@ -109,16 +155,18 @@ fun NavigationScaffold(
                     )
 
                     // Apple-inspired compact 4-item navigation bar
+                    // Using NavigationBarDefaults.windowInsets ensures correct drawing for both Gesture Nav and 3-Button Nav
                     NavigationBar(
                         containerColor = AurelTheme.colors.surface,
                         tonalElevation = 0.dp,
+                        windowInsets = NavigationBarDefaults.windowInsets,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         NavigationDestination.entries.forEach { destination ->
                             val selected = destination == currentDestination
                             NavigationBarItem(
                                 selected = selected,
-                                onClick = { currentDestination = destination },
+                                onClick = { navigateTo(destination) },
                                 icon = {
                                     Icon(
                                         imageVector = destination.icon,
@@ -153,8 +201,8 @@ fun NavigationScaffold(
                 when (currentDestination) {
                     NavigationDestination.HOME -> HomeScreen(
                         viewModel = homeViewModel,
-                        onNavigateToSearch = { currentDestination = NavigationDestination.SEARCH },
-                        onNavigateToSettings = { currentDestination = NavigationDestination.MORE }
+                        onNavigateToSearch = { navigateTo(NavigationDestination.SEARCH) },
+                        onNavigateToSettings = { navigateTo(NavigationDestination.MORE) }
                     )
                     NavigationDestination.LIBRARY -> LibraryScreen(
                         viewModel = libraryViewModel
@@ -174,11 +222,20 @@ fun NavigationScaffold(
             }
         }
 
-        // Full Screen Now Playing Modal Overlay
+        // Full Screen Now Playing Modal Overlay with Fluid Apple-like Motion
         AnimatedVisibility(
             visible = isNowPlayingOpen,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it })
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
+            )
         ) {
             NowPlayingScreen(
                 viewModel = nowPlayingViewModel,
@@ -191,7 +248,7 @@ fun NavigationScaffold(
                     if (album != null) {
                         libraryViewModel.selectTab(LibraryTab.ALBUMS)
                         libraryViewModel.selectAlbum(album)
-                        currentDestination = NavigationDestination.LIBRARY
+                        navigateTo(NavigationDestination.LIBRARY)
                         isNowPlayingOpen = false
                     }
                 },
@@ -200,7 +257,7 @@ fun NavigationScaffold(
                     if (artist != null) {
                         libraryViewModel.selectTab(LibraryTab.ARTISTS)
                         libraryViewModel.selectArtist(artist)
-                        currentDestination = NavigationDestination.LIBRARY
+                        navigateTo(NavigationDestination.LIBRARY)
                         isNowPlayingOpen = false
                     }
                 }

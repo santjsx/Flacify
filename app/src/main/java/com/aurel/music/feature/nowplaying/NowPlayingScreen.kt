@@ -1,7 +1,12 @@
 package com.aurel.music.feature.nowplaying
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +56,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,8 +64,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,6 +119,26 @@ fun NowPlayingScreen(
     var showAudioInfoDialog by remember { mutableStateOf(false) }
     var showAddToPlaylistSheet by remember { mutableStateOf(false) }
 
+    // Intercept system Back gesture (Gesture Nav edge-swipe) and 3-Button Nav back
+    BackHandler(enabled = true) {
+        if (showLyricsScreen) {
+            showLyricsScreen = false
+        } else {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onDismiss()
+        }
+    }
+
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    val animatedDragOffsetY by animateFloatAsState(
+        targetValue = dragOffsetY,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "nowPlayingDragY"
+    )
+
     if (currentSong == null) {
         onDismiss()
         return
@@ -133,78 +161,111 @@ fun NowPlayingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .graphicsLayer {
+                    translationY = animatedDragOffsetY
+                    if (animatedDragOffsetY > 0f) {
+                        alpha = (1f - (animatedDragOffsetY / 1200f)).coerceIn(0.6f, 1f)
+                    }
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. Top bar: Dismiss chevron & Playback context
-            Row(
+            // Top Section (Top bar + Spacer + Artwork) with vertical drag-down-to-dismiss gesture
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onVerticalDrag = { change, dragAmount ->
+                                if (dragAmount > 0f || dragOffsetY > 0f) {
+                                    change.consume()
+                                    dragOffsetY = (dragOffsetY + dragAmount).coerceAtLeast(0f)
+                                }
+                            },
+                            onDragEnd = {
+                                if (dragOffsetY > 160f) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onDismiss()
+                                }
+                                dragOffsetY = 0f
+                            },
+                            onDragCancel = {
+                                dragOffsetY = 0f
+                            }
+                        )
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onDismiss()
-                    }
+                // 1. Top bar: Dismiss chevron & Playback context
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Dismiss Now Playing",
-                        tint = AurelTheme.colors.primaryText,
-                        modifier = Modifier.size(32.dp)
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onDismiss()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Dismiss Now Playing",
+                            tint = AurelTheme.colors.primaryText,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "PLAYING FROM LIBRARY",
+                        style = AurelTheme.typography.metadata,
+                        color = AurelTheme.colors.secondaryText
                     )
+
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showSleepTimerSheet = true
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = "Sleep timer",
+                            tint = AurelTheme.colors.secondaryText,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
-                Text(
-                    text = "PLAYING FROM LIBRARY",
-                    style = AurelTheme.typography.metadata,
-                    color = AurelTheme.colors.secondaryText
-                )
+                Spacer(modifier = Modifier.height(16.dp))
 
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showSleepTimerSheet = true
-                    }
+                // 2. Large Album Artwork (Square, squircle corners, shadow)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .aspectRatio(1f)
+                        .shadow(elevation = 24.dp, shape = AurelTheme.shapes.extraLarge)
+                        .clip(AurelTheme.shapes.extraLarge)
+                        .background(AurelTheme.colors.surfaceVariant),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = "Sleep timer",
-                        tint = AurelTheme.colors.secondaryText,
-                        modifier = Modifier.size(24.dp)
+                    AsyncImage(
+                        model = "content://media/external/audio/albumart/${song.albumId}",
+                        contentDescription = "${song.title} album artwork",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 2. Large Album Artwork (Square, squircle corners, shadow)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .aspectRatio(1f)
-                    .shadow(elevation = 24.dp, shape = AurelTheme.shapes.extraLarge)
-                    .clip(AurelTheme.shapes.extraLarge)
-                    .background(AurelTheme.colors.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = "content://media/external/audio/albumart/${song.albumId}",
-                    contentDescription = "${song.title} album artwork",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                if (song.albumId <= 0L) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = AurelTheme.colors.tertiaryText,
-                        modifier = Modifier.size(80.dp)
-                    )
+                    if (song.albumId <= 0L) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = AurelTheme.colors.tertiaryText,
+                            modifier = Modifier.size(80.dp)
+                        )
+                    }
                 }
             }
 
