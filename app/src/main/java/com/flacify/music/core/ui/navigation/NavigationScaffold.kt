@@ -54,6 +54,7 @@ import com.flacify.music.feature.library.LibraryTab
 import com.flacify.music.feature.library.LibraryViewModel
 import com.flacify.music.feature.more.MoreScreen
 import com.flacify.music.feature.more.MoreViewModel
+import com.flacify.music.feature.more.MusicHapticsSheet
 import com.flacify.music.feature.nowplaying.NowPlayingScreen
 import com.flacify.music.feature.nowplaying.NowPlayingViewModel
 import com.flacify.music.feature.playlists.PlaylistsSheet
@@ -94,10 +95,11 @@ fun NavigationScaffold(
     var isNowPlayingOpen by remember { mutableStateOf(false) }
     var isMoreSleepTimerOpen by remember { mutableStateOf(false) }
     var isMoreEqualizerOpen by remember { mutableStateOf(false) }
+    var isMoreMusicHapticsOpen by remember { mutableStateOf(false) }
     var isFavoritesOpen by remember { mutableStateOf(false) }
     var isPlaylistsOpen by remember { mutableStateOf(false) }
 
-    val hasAnyOverlayOpen = isNowPlayingOpen || isMoreSleepTimerOpen || isMoreEqualizerOpen || isFavoritesOpen || isPlaylistsOpen
+    val hasAnyOverlayOpen = isNowPlayingOpen || isMoreSleepTimerOpen || isMoreEqualizerOpen || isMoreMusicHapticsOpen || isFavoritesOpen || isPlaylistsOpen
 
     val context = LocalContext.current
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
@@ -106,6 +108,7 @@ fun NavigationScaffold(
     // 1. Independent sheets dismiss first (order of priority)
     BackHandler(enabled = isMoreSleepTimerOpen) { isMoreSleepTimerOpen = false }
     BackHandler(enabled = isMoreEqualizerOpen) { isMoreEqualizerOpen = false }
+    BackHandler(enabled = isMoreMusicHapticsOpen) { isMoreMusicHapticsOpen = false }
     BackHandler(enabled = isFavoritesOpen) { isFavoritesOpen = false }
     BackHandler(enabled = isPlaylistsOpen) { isPlaylistsOpen = false }
 
@@ -168,7 +171,28 @@ fun NavigationScaffold(
                     NavigationDestination.HOME -> HomeScreen(
                         viewModel = homeViewModel,
                         onNavigateToSearch = { navigateTo(NavigationDestination.SEARCH) },
-                        onNavigateToSettings = { navigateTo(NavigationDestination.MORE) }
+                        onNavigateToSettings = { navigateTo(NavigationDestination.MORE) },
+                        onNavigateToSongs = {
+                            libraryViewModel.selectTab(LibraryTab.SONGS)
+                            libraryViewModel.selectAlbum(null)
+                            libraryViewModel.selectArtist(null)
+                            libraryViewModel.selectPlaylist(null)
+                            navigateTo(NavigationDestination.LIBRARY)
+                        },
+                        onNavigateToAlbums = {
+                            libraryViewModel.selectTab(LibraryTab.ALBUMS)
+                            libraryViewModel.selectAlbum(null)
+                            libraryViewModel.selectArtist(null)
+                            libraryViewModel.selectPlaylist(null)
+                            navigateTo(NavigationDestination.LIBRARY)
+                        },
+                        onNavigateToArtists = {
+                            libraryViewModel.selectTab(LibraryTab.ARTISTS)
+                            libraryViewModel.selectAlbum(null)
+                            libraryViewModel.selectArtist(null)
+                            libraryViewModel.selectPlaylist(null)
+                            navigateTo(NavigationDestination.LIBRARY)
+                        }
                     )
                     NavigationDestination.LIBRARY -> LibraryScreen(
                         viewModel = libraryViewModel
@@ -181,6 +205,7 @@ fun NavigationScaffold(
                         onRescanClick = { homeViewModel.scanLibrary() },
                         onEqualizerClick = { isMoreEqualizerOpen = true },
                         onSleepTimerClick = { isMoreSleepTimerOpen = true },
+                        onMusicHapticsClick = { isMoreMusicHapticsOpen = true },
                         onFavoritesClick = { isFavoritesOpen = true },
                         onPlaylistsClick = { isPlaylistsOpen = true },
                         hasActiveTrack = (currentSong != null)
@@ -267,6 +292,17 @@ fun NavigationScaffold(
             EqualizerSheet(
                 equalizerController = equalizerController,
                 onDismiss = { isMoreEqualizerOpen = false }
+            )
+        }
+
+        if (isMoreMusicHapticsOpen) {
+            val musicHapticsMode by moreViewModel.musicHapticsMode.collectAsStateWithLifecycle()
+            MusicHapticsSheet(
+                currentMode = musicHapticsMode,
+                onModeSelected = { mode ->
+                    moreViewModel.setMusicHapticsMode(mode)
+                },
+                onDismiss = { isMoreMusicHapticsOpen = false }
             )
         }
 

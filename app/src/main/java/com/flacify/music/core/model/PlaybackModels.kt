@@ -58,6 +58,12 @@ enum class AudioQuality(val badgeText: String) {
     val isHiRes: Boolean get() = this == HI_RES_LOSSLESS
 }
 
+enum class HapticMode(val displayName: String, val subtitle: String) {
+    OFF("Off", "Haptics disabled"),
+    VOCALS_ONLY("Vocals Only", "Tactile melodic swells and vocal phrasing"),
+    FULL_MIX("Full Mix", "Bass drops, kick thuds, and crisp percussive ticks")
+}
+
 @Immutable
 data class AudioFormatInfo(
     val codec: String,

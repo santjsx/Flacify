@@ -1,6 +1,8 @@
 package com.flacify.music.feature.more
 
 import com.flacify.music.BuildConfig
+import androidx.activity.compose.BackHandler
+import com.flacify.music.core.model.HapticMode
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -53,6 +55,7 @@ fun MoreScreen(
     onRescanClick: () -> Unit,
     onEqualizerClick: () -> Unit = {},
     onSleepTimerClick: () -> Unit = {},
+    onMusicHapticsClick: () -> Unit = {},
     onFavoritesClick: () -> Unit = {},
     onPlaylistsClick: () -> Unit = {},
     hasActiveTrack: Boolean = false,
@@ -66,6 +69,7 @@ fun MoreScreen(
     val albumCount by viewModel.albumCount.collectAsStateWithLifecycle()
     val artistCount by viewModel.artistCount.collectAsStateWithLifecycle()
     val updateState by viewModel.updateUiState.collectAsStateWithLifecycle()
+    val musicHapticsMode by viewModel.musicHapticsMode.collectAsStateWithLifecycle()
     val bottomClearance = rememberFloatingDockBottomClearance(hasActiveTrack = hasActiveTrack)
 
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -159,6 +163,19 @@ fun MoreScreen(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onEqualizerClick()
+                    }
+                )
+                PreferenceRow(
+                    icon = FlacifyIcons.Vibration,
+                    title = "Music Haptics",
+                    subtitle = when (musicHapticsMode) {
+                        HapticMode.OFF -> "Disabled"
+                        HapticMode.FULL_MIX -> "Full Mix (Bass & Transients)"
+                        HapticMode.VOCALS_ONLY -> "Vocals Only (Melodic Swells)"
+                    },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onMusicHapticsClick()
                     }
                 )
                 PreferenceRow(

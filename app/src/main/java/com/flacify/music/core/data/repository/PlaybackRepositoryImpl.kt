@@ -92,10 +92,23 @@ class PlaybackRepositoryImpl @Inject constructor(
     private fun setupPlayerListener(controller: MediaController) {
         controller.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                val songId = mediaItem?.mediaId?.toLongOrNull()
+                if (mediaItem == null) {
+                    if (_queue.value.isEmpty()) {
+                        _currentSong.value = null
+                    }
+                    return
+                }
+                val songId = mediaItem.mediaId.toLongOrNull()
                 val activeSong = _queue.value.find { it.id == songId }
-                _currentSong.value = activeSong
-                _durationMs.value = controller.duration.coerceAtLeast(0L)
+                if (activeSong != null) {
+                    _currentSong.value = activeSong
+                    val resolvedDuration = if (controller.duration > 0L) {
+                        controller.duration
+                    } else {
+                        activeSong.durationMs
+                    }
+                    _durationMs.value = resolvedDuration.coerceAtLeast(0L)
+                }
                 _currentPositionMs.value = controller.currentPosition.coerceAtLeast(0L)
             }
 
@@ -107,7 +120,12 @@ class PlaybackRepositoryImpl @Inject constructor(
                     Player.STATE_ENDED -> PlaybackState.Ended
                     else -> PlaybackState.Idle
                 }
-                _durationMs.value = controller.duration.coerceAtLeast(0L)
+                val resolvedDuration = if (controller.duration > 0L) {
+                    controller.duration
+                } else {
+                    _currentSong.value?.durationMs ?: 0L
+                }
+                _durationMs.value = resolvedDuration.coerceAtLeast(0L)
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -171,11 +189,20 @@ class PlaybackRepositoryImpl @Inject constructor(
     override fun playSong(song: Song, newQueue: List<Song>) {
         val tracks = if (newQueue.isNotEmpty()) newQueue else listOf(song)
         val startIndex = tracks.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+        _currentSong.value = song
+        _durationMs.value = song.durationMs
+        _currentPositionMs.value = 0L
         playQueue(tracks, startIndex)
     }
 
     override fun playQueue(songs: List<Song>, startIndex: Int) {
         _queue.value = songs
+        val targetSong = songs.getOrNull(startIndex)
+        if (targetSong != null) {
+            _currentSong.value = targetSong
+            _durationMs.value = targetSong.durationMs
+            _currentPositionMs.value = 0L
+        }
         val controller = mediaController ?: return
 
         val mediaItems = songs.map { it.toMediaItem() }
@@ -198,19 +225,34 @@ class PlaybackRepositoryImpl @Inject constructor(
     }
 
     override fun skipToNext() {
-        mediaController?.let {
-            if (it.hasNextMediaItem()) {
-                it.seekToNextMediaItem()
+        mediaController?.let { controller ->
+            if (controller.hasNextMediaItem()) {
+                val nextIndex = controller.nextMediaItemIndex
+                val nextSong = _queue.value.getOrNull(nextIndex)
+                if (nextSong != null) {
+                    _currentSong.value = nextSong
+                    _durationMs.value = nextSong.durationMs
+                    _currentPositionMs.value = 0L
+                }
+                controller.seekToNextMediaItem()
             }
         }
     }
 
     override fun skipToPrevious() {
-        mediaController?.let {
-            if (it.currentPosition > 3000L || !it.hasPreviousMediaItem()) {
-                it.seekTo(0L)
+        mediaController?.let { controller ->
+            if (controller.currentPosition > 3000L || !controller.hasPreviousMediaItem()) {
+                _currentPositionMs.value = 0L
+                controller.seekTo(0L)
             } else {
-                it.seekToPreviousMediaItem()
+                val prevIndex = controller.previousMediaItemIndex
+                val prevSong = _queue.value.getOrNull(prevIndex)
+                if (prevSong != null) {
+                    _currentSong.value = prevSong
+                    _durationMs.value = prevSong.durationMs
+                    _currentPositionMs.value = 0L
+                }
+                controller.seekToPreviousMediaItem()
             }
         }
     }

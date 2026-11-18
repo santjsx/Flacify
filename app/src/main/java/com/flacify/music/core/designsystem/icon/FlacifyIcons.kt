@@ -355,4 +355,13 @@ object FlacifyIcons {
             lucidePath("M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2")
         }
     }
+
+    val Vibration: ImageVector by lazy {
+        lucideIcon("FLACifyVibration") {
+            lucidePath("m2 8 2 2-2 2 2 2-2 2")
+            lucidePath("m22 8-2 2 2 2-2 2 2 2")
+            lucidePath("M 7 5 C 7 3.89 7.89 3 9 3 L 15 3 C 16.11 3 17 3.89 17 5 L 17 19 C 17 20.11 16.11 21 15 21 L 9 21 C 7.89 21 7 20.11 7 19 Z")
+            lucidePath("M12 18h.01")
+        }
+    }
 }

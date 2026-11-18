@@ -61,11 +61,17 @@ Thumbs.db
 signing.properties
 
 # Documentation & Markdown rules:
-# Exclude ALL .md, .doc, .docx, .txt, .pdf files EXCEPT README.md
+# Exclude ALL .md, .doc, .docx, .txt, .pdf files EXCEPT README.md, agents.md, DEFECT_LEDGER.md
 *.md
 **/*.md
 !/README.md
 !README.md
+!/agents.md
+!agents.md
+!/AGENTS.md
+!AGENTS.md
+!/DEFECT_LEDGER.md
+!DEFECT_LEDGER.md
 *.doc
 *.docx
 *.txt

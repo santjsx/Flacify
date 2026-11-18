@@ -57,6 +57,9 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onNavigateToSearch: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToSongs: () -> Unit = {},
+    onNavigateToAlbums: () -> Unit = {},
+    onNavigateToArtists: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -185,18 +188,21 @@ fun HomeScreen(
                 title = "Songs",
                 count = songCount,
                 icon = FlacifyIcons.MusicNote,
+                onClick = onNavigateToSongs,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 title = "Albums",
                 count = albumCount,
                 icon = FlacifyIcons.Album,
+                onClick = onNavigateToAlbums,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 title = "Artists",
                 count = artistCount,
                 icon = FlacifyIcons.Artist,
+                onClick = onNavigateToArtists,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -305,6 +311,7 @@ private fun StatCard(
     title: String,
     count: Int,
     icon: ImageVector,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDark = FlacifyTheme.colors.isDark
@@ -313,7 +320,7 @@ private fun StatCard(
             .clip(FlacifyTheme.shapes.large)
             .background(FlacifyTheme.glass.cardBackground)
             .border(FlacifyTheme.glass.borderSubtle, shape = FlacifyTheme.shapes.large)
-            .bounceClick()
+            .bounceClick(onClick = onClick)
     ) {
         // Subtle top rim highlight
         Box(

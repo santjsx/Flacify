@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.flacify.music.core.model.AlbumSortOption
+import com.flacify.music.core.model.HapticMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -29,12 +30,14 @@ interface UserPreferencesRepository {
     val dynamicColorsEnabled: Flow<Boolean>
     val gaplessEnabled: Flow<Boolean>
     val albumSortOption: Flow<AlbumSortOption>
+    val musicHapticsMode: Flow<HapticMode>
 
     suspend fun setThemeMode(mode: ThemeMode)
     suspend fun setMinTrackDurationSec(seconds: Int)
     suspend fun setDynamicColorsEnabled(enabled: Boolean)
     suspend fun setGaplessEnabled(enabled: Boolean)
     suspend fun setAlbumSortOption(option: AlbumSortOption)
+    suspend fun setMusicHapticsMode(mode: HapticMode)
 }
 
 @Singleton
@@ -48,6 +51,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val DYNAMIC_COLORS_ENABLED = booleanPreferencesKey("dynamic_colors_enabled")
         val GAPLESS_ENABLED = booleanPreferencesKey("gapless_enabled")
         val ALBUM_SORT_OPTION = stringPreferencesKey("album_sort_option")
+        val MUSIC_HAPTICS_MODE = stringPreferencesKey("music_haptics_mode")
     }
 
     override val themeMode: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
@@ -80,6 +84,15 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         }
     }
 
+    override val musicHapticsMode: Flow<HapticMode> = context.dataStore.data.map { preferences ->
+        val modeStr = preferences[PreferencesKeys.MUSIC_HAPTICS_MODE] ?: HapticMode.FULL_MIX.name
+        try {
+            HapticMode.valueOf(modeStr)
+        } catch (_: Exception) {
+            HapticMode.FULL_MIX
+        }
+    }
+
     override suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = mode.name
@@ -107,6 +120,12 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override suspend fun setAlbumSortOption(option: AlbumSortOption) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.ALBUM_SORT_OPTION] = option.name
+        }
+    }
+
+    override suspend fun setMusicHapticsMode(mode: HapticMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MUSIC_HAPTICS_MODE] = mode.name
         }
     }
 }

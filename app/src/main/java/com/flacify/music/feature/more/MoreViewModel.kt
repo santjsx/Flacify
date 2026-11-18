@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.Coil
 import com.flacify.music.BuildConfig
+import com.flacify.music.core.audio.haptics.MusicHapticsManager
 import com.flacify.music.core.data.repository.SongRepository
 import com.flacify.music.core.data.repository.ThemeMode
 import com.flacify.music.core.data.repository.UserPreferencesRepository
+import com.flacify.music.core.model.HapticMode
 import com.flacify.music.core.update.GitHubUpdateManager
 import com.flacify.music.core.update.UpdateCheckResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,7 +47,8 @@ sealed interface UpdateUiState {
 class MoreViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val gitHubUpdateManager: GitHubUpdateManager
+    private val gitHubUpdateManager: GitHubUpdateManager,
+    private val musicHapticsManager: MusicHapticsManager
 ) : ViewModel() {
 
     val themeMode: StateFlow<ThemeMode> = userPreferencesRepository.themeMode
@@ -53,6 +56,9 @@ class MoreViewModel @Inject constructor(
 
     val minTrackDurationSec: StateFlow<Int> = userPreferencesRepository.minTrackDurationSec
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 15)
+
+    val musicHapticsMode: StateFlow<HapticMode> = userPreferencesRepository.musicHapticsMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HapticMode.FULL_MIX)
 
     val songCount: StateFlow<Int> = songRepository.getSongCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
@@ -70,6 +76,10 @@ class MoreViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.setThemeMode(mode)
         }
+    }
+
+    fun setMusicHapticsMode(mode: HapticMode) {
+        musicHapticsManager.setMode(mode)
     }
 
     fun setMinTrackDurationSec(seconds: Int) {

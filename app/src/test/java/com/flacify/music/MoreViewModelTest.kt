@@ -1,8 +1,10 @@
 package com.flacify.music
 
+import com.flacify.music.core.audio.haptics.MusicHapticsManager
 import com.flacify.music.core.data.repository.SongRepository
 import com.flacify.music.core.data.repository.ThemeMode
 import com.flacify.music.core.data.repository.UserPreferencesRepository
+import com.flacify.music.core.model.HapticMode
 import com.flacify.music.core.update.GitHubUpdateManager
 import com.flacify.music.core.update.UpdateCheckResult
 import com.flacify.music.feature.more.MoreViewModel
@@ -10,6 +12,7 @@ import com.flacify.music.feature.more.UpdateUiState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -31,6 +34,7 @@ class MoreViewModelTest {
     private val songRepository: SongRepository = mockk(relaxed = true)
     private val userPreferencesRepository: UserPreferencesRepository = mockk(relaxed = true)
     private val gitHubUpdateManager: GitHubUpdateManager = mockk(relaxed = true)
+    private val musicHapticsManager: MusicHapticsManager = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -40,6 +44,7 @@ class MoreViewModelTest {
         coEvery { songRepository.getArtistCount() } returns flowOf(30)
         coEvery { userPreferencesRepository.themeMode } returns flowOf(ThemeMode.SYSTEM)
         coEvery { userPreferencesRepository.minTrackDurationSec } returns flowOf(15)
+        coEvery { userPreferencesRepository.musicHapticsMode } returns flowOf(HapticMode.FULL_MIX)
     }
 
     @After
@@ -49,11 +54,20 @@ class MoreViewModelTest {
 
     @Test
     fun themeMode_updatesSuccessfully() = runTest(testDispatcher) {
-        val viewModel = MoreViewModel(songRepository, userPreferencesRepository, gitHubUpdateManager)
+        val viewModel = MoreViewModel(songRepository, userPreferencesRepository, gitHubUpdateManager, musicHapticsManager)
         viewModel.setThemeMode(ThemeMode.DARK)
         advanceUntilIdle()
 
         coVerify { userPreferencesRepository.setThemeMode(ThemeMode.DARK) }
+    }
+
+    @Test
+    fun musicHapticsMode_updatesSuccessfully() = runTest(testDispatcher) {
+        val viewModel = MoreViewModel(songRepository, userPreferencesRepository, gitHubUpdateManager, musicHapticsManager)
+        viewModel.setMusicHapticsMode(HapticMode.VOCALS_ONLY)
+        advanceUntilIdle()
+
+        verify { musicHapticsManager.setMode(HapticMode.VOCALS_ONLY) }
     }
 
     @Test
@@ -65,7 +79,7 @@ class MoreViewModelTest {
             apkSizeBytes = 15_000_000L
         )
 
-        val viewModel = MoreViewModel(songRepository, userPreferencesRepository, gitHubUpdateManager)
+        val viewModel = MoreViewModel(songRepository, userPreferencesRepository, gitHubUpdateManager, musicHapticsManager)
         viewModel.checkForUpdates()
         advanceUntilIdle()
 
@@ -79,7 +93,7 @@ class MoreViewModelTest {
     fun checkForUpdates_upToDate_updatesUiState() = runTest(testDispatcher) {
         coEvery { gitHubUpdateManager.checkForUpdates(any(), any()) } returns UpdateCheckResult.UpToDate
 
-        val viewModel = MoreViewModel(songRepository, userPreferencesRepository, gitHubUpdateManager)
+        val viewModel = MoreViewModel(songRepository, userPreferencesRepository, gitHubUpdateManager, musicHapticsManager)
         viewModel.checkForUpdates()
         advanceUntilIdle()
 

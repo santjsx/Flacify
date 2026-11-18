@@ -1,16 +1,22 @@
 package com.flacify.music.core.audio.service
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.flacify.music.MainActivity
 import com.flacify.music.core.audio.equalizer.EqualizerController
+import com.flacify.music.core.audio.haptics.MusicHapticsManager
 import com.flacify.music.core.audio.interruption.BecomingNoisyReceiver
 import com.flacify.music.core.audio.notification.FlacifyNotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,6 +29,9 @@ class FlacifyPlaybackService : MediaSessionService() {
     @Inject
     lateinit var equalizerController: EqualizerController
 
+    @Inject
+    lateinit var musicHapticsManager: MusicHapticsManager
+
     private var mediaSession: MediaSession? = null
     private var exoPlayer: ExoPlayer? = null
     private var becomingNoisyReceiver: BecomingNoisyReceiver? = null
@@ -31,7 +40,19 @@ class FlacifyPlaybackService : MediaSessionService() {
         super.onCreate()
         FlacifyNotificationHelper.createNotificationChannel(this)
 
-        val player = ExoPlayer.Builder(this)
+        val renderersFactory = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean
+            ): AudioSink? {
+                return DefaultAudioSink.Builder(context)
+                    .setAudioProcessors(arrayOf(musicHapticsManager.tapProcessor))
+                    .build()
+            }
+        }
+
+        val player = ExoPlayer.Builder(this, renderersFactory)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -44,6 +65,17 @@ class FlacifyPlaybackService : MediaSessionService() {
             .build()
 
         exoPlayer = player
+
+        // Hook Haptic Orchestrator into player state changes
+        player.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) {
+                    musicHapticsManager.start()
+                } else {
+                    musicHapticsManager.stop()
+                }
+            }
+        })
 
         // Bind active audio session to Equalizer
         equalizerController.bindAudioSession(player.audioSessionId)
@@ -85,6 +117,7 @@ class FlacifyPlaybackService : MediaSessionService() {
     override fun onDestroy() {
         becomingNoisyReceiver?.unregister()
         becomingNoisyReceiver = null
+        musicHapticsManager.stop()
 
         mediaSession?.run {
             player.release()

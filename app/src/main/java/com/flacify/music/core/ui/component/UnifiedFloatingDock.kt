@@ -52,6 +52,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -241,6 +243,7 @@ private fun MiniPlayerSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .height(76.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -249,7 +252,7 @@ private fun MiniPlayerSection(
             .padding(horizontal = 20.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Drag handle
+        // Drag handle (height 4dp)
         Box(
             modifier = Modifier
                 .width(32.dp)
@@ -260,7 +263,9 @@ private fun MiniPlayerSection(
         Spacer(Modifier.height(8.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Clean & minimal 42dp Squircle Album Art with fallback
@@ -293,8 +298,16 @@ private fun MiniPlayerSection(
 
             Spacer(Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(38.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -305,6 +318,12 @@ private fun MiniPlayerSection(
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        style = TextStyle(
+                            platformStyle = PlatformTextStyle(
+                                includeFontPadding = false
+                            ),
+                            lineHeight = 18.sp
+                        ),
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     song.audioQuality?.let { quality ->
@@ -317,12 +336,21 @@ private fun MiniPlayerSection(
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = song.artistName,
+                    text = song.artistName.ifBlank { "Unknown Artist" },
                     color = colors.secondaryText,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(
+                        platformStyle = PlatformTextStyle(
+                            includeFontPadding = false
+                        ),
+                        lineHeight = 16.sp
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
                 )
             }
 
@@ -351,17 +379,22 @@ private fun MiniPlayerSection(
             }
         }
 
-        // 2dp track progress indicator
-        if (durationMs > 0L) {
-            Spacer(Modifier.height(6.dp))
-            val progress = (currentPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(colors.borderColor.copy(alpha = 0.3f))
-            ) {
+        // 2dp track progress indicator (always present in its reserved 8dp slot to guarantee zero layout shifts)
+        Spacer(Modifier.height(6.dp))
+        val effectiveDuration = if (durationMs > 0L) durationMs else song.durationMs
+        val progress = if (effectiveDuration > 0L) {
+            (currentPositionMs.toFloat() / effectiveDuration.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .clip(RoundedCornerShape(1.dp))
+                .background(colors.borderColor.copy(alpha = 0.3f))
+        ) {
+            if (progress > 0f) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(progress)
