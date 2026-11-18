@@ -10,6 +10,7 @@ import com.flacify.music.core.data.repository.SongRepository
 import com.flacify.music.core.data.repository.ThemeMode
 import com.flacify.music.core.data.repository.UserPreferencesRepository
 import com.flacify.music.core.model.HapticMode
+import com.flacify.music.core.model.HapticStrength
 import com.flacify.music.core.update.GitHubUpdateManager
 import com.flacify.music.core.update.UpdateCheckResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,6 +61,15 @@ class MoreViewModel @Inject constructor(
     val musicHapticsMode: StateFlow<HapticMode> = userPreferencesRepository.musicHapticsMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HapticMode.FULL_MIX)
 
+    val musicHapticsStrength: StateFlow<HapticStrength> = userPreferencesRepository.musicHapticsStrength
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HapticStrength.BALANCED)
+
+    val musicHapticsSyncOffsetMs: StateFlow<Int> = userPreferencesRepository.musicHapticsSyncOffsetMs
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val currentAudioRouteName: String
+        get() = musicHapticsManager.currentAudioRouteName
+
     val songCount: StateFlow<Int> = songRepository.getSongCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -80,6 +90,18 @@ class MoreViewModel @Inject constructor(
 
     fun setMusicHapticsMode(mode: HapticMode) {
         musicHapticsManager.setMode(mode)
+    }
+
+    fun setMusicHapticsStrength(strength: HapticStrength) {
+        musicHapticsManager.setStrength(strength)
+    }
+
+    fun setMusicHapticsSyncOffsetMs(offsetMs: Int) {
+        musicHapticsManager.setSyncOffset(offsetMs)
+    }
+
+    fun triggerTestBeat() {
+        musicHapticsManager.triggerTestBeat()
     }
 
     fun setMinTrackDurationSec(seconds: Int) {

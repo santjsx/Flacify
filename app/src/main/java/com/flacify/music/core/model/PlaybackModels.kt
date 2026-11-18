@@ -64,6 +64,12 @@ enum class HapticMode(val displayName: String, val subtitle: String) {
     FULL_MIX("Full Mix", "Bass drops, kick thuds, and crisp percussive ticks")
 }
 
+enum class HapticStrength(val multiplier: Float, val label: String) {
+    GENTLE(0.65f, "Gentle"),
+    BALANCED(1.0f, "Balanced"),
+    POWERFUL(1.35f, "Powerful")
+}
+
 @Immutable
 data class AudioFormatInfo(
     val codec: String,

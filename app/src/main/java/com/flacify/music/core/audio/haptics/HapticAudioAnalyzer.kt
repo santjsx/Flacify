@@ -3,52 +3,92 @@ package com.flacify.music.core.audio.haptics
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+/**
+ * High-fidelity haptic event packet containing classified musical transients,
+ * dynamic onset velocity, and continuous melodic envelopes.
+ */
 data class HapticFrame(
-    val bassIntensity: Float,      // 0.0f to 1.0f (Sub-bass & kick drum envelope)
-    val vocalIntensity: Float,     // 0.0f to 1.0f (Melodic swell envelope)
-    val transientTrigger: Boolean, // True on sharp kick/bass drop onsets
-    val highTransient: Boolean     // True on crisp hi-hat / snare transient ticks
-)
+    val bassIntensity: Float,      // 0.0f to 1.0f (Sub-bass continuous foundation)
+    val vocalIntensity: Float,     // 0.0f to 1.0f (Midrange / vocal envelope)
+    val isKickDrum: Boolean,       // True on kick drum / heavy beat onset
+    val isSnareHit: Boolean,       // True on snare / clap onset
+    val isHiHatTick: Boolean,      // True on crisp hi-hat / cymbal tick
+    val dynamicScale: Float = 0.8f // Dynamic velocity multiplier (0.35f to 1.0f)
+) {
+    // Backward compatibility properties
+    val transientTrigger: Boolean get() = isKickDrum
+    val highTransient: Boolean get() = isHiHatTick || isSnareHit
+}
 
 /**
- * Real-time audio analysis engine implementing a Direct Form II Transposed
- * Biquad filter bank, spectral flux onset detector, and adaptive Auto Gain Control (AGC).
+ * Apple-grade Real-Time Audio DSP Analyzer implementing:
+ * 1. Direct Form II Transposed Biquad Filter Bank (Sub-Bass 60Hz, Mid/Snare 1800Hz, High-Pass 5000Hz).
+ * 2. SuperFlux Spectral Difference Onset Detection with moving mean/variance adaptive thresholding.
+ * 3. Dynamic Velocity Scaling (distinguishing heavy downbeats from subtle ghost notes).
+ * 4. Millisecond-accurate refractory debouncing per frequency band.
  */
 class HapticAudioAnalyzer(
     sampleRate: Int = 44100
 ) {
-    // 1. Direct Form II Transposed Biquad Filters
-    private var subBassFilter = BiquadFilter.createBandpass(sampleRate, centerFreq = 65f, q = 0.8f)
-    private var midVocalFilter = BiquadFilter.createBandpass(sampleRate, centerFreq = 1200f, q = 0.7f)
-    private var highPassFilter = BiquadFilter.createHighpass(sampleRate, cutoffFreq = 4200f, q = 0.707f)
-
     private var currentSampleRate = sampleRate
 
-    // 2. Dynamic Envelopes & Moving Averages
+    // 1. Direct Form II Transposed Biquad Filters
+    // Kick drum fundamental: 60Hz, Q=1.0
+    private var subBassFilter = BiquadFilter.createBandpass(sampleRate, centerFreq = 60f, q = 1.0f)
+    // Snare / clap / vocal punch: 1800Hz, Q=0.8
+    private var midSnareFilter = BiquadFilter.createBandpass(sampleRate, centerFreq = 1800f, q = 0.8f)
+    // Mid vocal phrasing: 1000Hz, Q=0.7
+    private var midVocalFilter = BiquadFilter.createBandpass(sampleRate, centerFreq = 1000f, q = 0.7f)
+    // Crisp percussion / hi-hats: 5000Hz high-pass
+    private var highPassFilter = BiquadFilter.createHighpass(sampleRate, cutoffFreq = 5000f, q = 0.707f)
+
+    // 2. Continuous RMS Envelopes & AGC Trackers
     private var bassEnergyEnvelope = 0f
     private var vocalEnergyEnvelope = 0f
-    private var previousHighEnergy = 0f
-
-    // 3. Adaptive AGC Parameters
     private var peakBassTracker = 0.08f
     private var peakVocalTracker = 0.08f
+
+    // 3. Spectral Flux Tracking
+    private var prevBassRms = 0f
+    private var prevSnareRms = 0f
+    private var prevHighRms = 0f
+    private var peakFluxTracker = 0.08f
+
+    // 4. Moving History for Adaptive Thresholding (40 frames)
+    private val historySize = 40
+    private val bassFluxHistory = FloatArray(historySize)
+    private val snareFluxHistory = FloatArray(historySize)
+    private val highFluxHistory = FloatArray(historySize)
+    private var historyIndex = 0
+    private var historyFilled = false
+
+    // 5. Refractory Window Counters (in samples)
+    private var processedSamplesTotal = 0L
+    private var lastKickSample = -100_000L
+    private var lastSnareSample = -100_000L
+    private var lastHiHatSample = -100_000L
 
     fun updateSampleRate(newRate: Int) {
         if (newRate > 0 && newRate != currentSampleRate) {
             currentSampleRate = newRate
-            subBassFilter = BiquadFilter.createBandpass(newRate, centerFreq = 65f, q = 0.8f)
-            midVocalFilter = BiquadFilter.createBandpass(newRate, centerFreq = 1200f, q = 0.7f)
-            highPassFilter = BiquadFilter.createHighpass(newRate, cutoffFreq = 4200f, q = 0.707f)
+            subBassFilter = BiquadFilter.createBandpass(newRate, centerFreq = 60f, q = 1.0f)
+            midSnareFilter = BiquadFilter.createBandpass(newRate, centerFreq = 1800f, q = 0.8f)
+            midVocalFilter = BiquadFilter.createBandpass(newRate, centerFreq = 1000f, q = 0.7f)
+            highPassFilter = BiquadFilter.createHighpass(newRate, cutoffFreq = 5000f, q = 0.707f)
         }
     }
 
     fun analyzeBlock(pcmSamples: FloatArray, count: Int): HapticFrame {
-        if (count <= 0) return HapticFrame(0f, 0f, transientTrigger = false, highTransient = false)
+        if (count <= 0) return HapticFrame(0f, 0f, isKickDrum = false, isSnareHit = false, isHiHatTick = false, dynamicScale = 0.8f)
+
+        processedSamplesTotal += count
 
         var bassSumSq = 0f
+        var snareSumSq = 0f
         var vocalSumSq = 0f
         var highSumSq = 0f
 
@@ -58,6 +98,9 @@ class HapticAudioAnalyzer(
             val bassSample = subBassFilter.process(sample)
             bassSumSq += bassSample * bassSample
 
+            val snareSample = midSnareFilter.process(sample)
+            snareSumSq += snareSample * snareSample
+
             val vocalSample = midVocalFilter.process(sample)
             vocalSumSq += vocalSample * vocalSample
 
@@ -65,41 +108,120 @@ class HapticAudioAnalyzer(
             highSumSq += highSample * highSample
         }
 
-        // Instantaneous RMS calculation
+        // 1. Instantaneous Band RMS
         val currentBassRms = sqrt(bassSumSq / count)
+        val currentSnareRms = sqrt(snareSumSq / count)
         val currentVocalRms = sqrt(vocalSumSq / count)
         val currentHighRms = sqrt(highSumSq / count)
 
-        // Asymmetric Envelope Follower (Fast Attack 12ms, Smooth Decay 180ms)
+        // 2. Smooth Envelopes (Fast Attack ~12ms, Smooth Decay ~150ms)
         bassEnergyEnvelope = updateEnvelope(bassEnergyEnvelope, currentBassRms, attack = 0.45f, decay = 0.08f)
         vocalEnergyEnvelope = updateEnvelope(vocalEnergyEnvelope, currentVocalRms, attack = 0.35f, decay = 0.06f)
 
-        // Adaptive AGC Peak Normalization
+        // 3. Adaptive Peak AGC
         peakBassTracker = max(peakBassTracker * 0.995f, bassEnergyEnvelope).coerceAtLeast(0.02f)
         peakVocalTracker = max(peakVocalTracker * 0.995f, vocalEnergyEnvelope).coerceAtLeast(0.02f)
 
         val normalizedBass = (bassEnergyEnvelope / peakBassTracker).coerceIn(0f, 1f)
         val normalizedVocal = (vocalEnergyEnvelope / peakVocalTracker).coerceIn(0f, 1f)
 
-        // Spectral Flux Onset Detection on Bass (Beat drops) and Highs (Percussion ticks)
-        val bassFlux = currentBassRms - bassEnergyEnvelope
-        val isBassOnset = bassFlux > (peakBassTracker * 0.55f) && normalizedBass > 0.4f
+        // 4. Half-Wave Rectified Spectral Difference Flux: ΔE = max(0, E[t] - E[t-1])
+        val bassFlux = max(0f, currentBassRms - prevBassRms)
+        val snareFlux = max(0f, currentSnareRms - prevSnareRms)
+        val highFlux = max(0f, currentHighRms - prevHighRms)
 
-        val highFlux = currentHighRms - previousHighEnergy
-        previousHighEnergy = currentHighRms
-        val isHighOnset = highFlux > 0.045f
+        prevBassRms = currentBassRms
+        prevSnareRms = currentSnareRms
+        prevHighRms = currentHighRms
+
+        // 5. Update Sliding History & Calculate Moving Statistics (μ + k*σ)
+        bassFluxHistory[historyIndex] = bassFlux
+        snareFluxHistory[historyIndex] = snareFlux
+        highFluxHistory[historyIndex] = highFlux
+        historyIndex = (historyIndex + 1) % historySize
+        if (historyIndex == 0) historyFilled = true
+
+        val validCount = if (historyFilled) historySize else historyIndex.coerceAtLeast(1)
+
+        val (bassMean, bassStdDev) = calculateStats(bassFluxHistory, validCount)
+        val (snareMean, snareStdDev) = calculateStats(snareFluxHistory, validCount)
+        val (highMean, highStdDev) = calculateStats(highFluxHistory, validCount)
+
+        // 6. Refractory Periods (90ms kick, 80ms snare, 50ms hi-hat)
+        val kickRefractorySamples = (currentSampleRate * 0.090).toLong()
+        val snareRefractorySamples = (currentSampleRate * 0.080).toLong()
+        val hiHatRefractorySamples = (currentSampleRate * 0.050).toLong()
+
+        val kickAllowed = (processedSamplesTotal - lastKickSample) >= kickRefractorySamples
+        val snareAllowed = (processedSamplesTotal - lastSnareSample) >= snareRefractorySamples
+        val hiHatAllowed = (processedSamplesTotal - lastHiHatSample) >= hiHatRefractorySamples
+
+        // 7. Onset Detection Logic
+        val kickThreshold = max(0.020f, bassMean + 1.5f * bassStdDev)
+        val isKickOnset = kickAllowed && bassFlux > kickThreshold && normalizedBass > 0.25f
+
+        val snareThreshold = max(0.018f, snareMean + 1.6f * snareStdDev)
+        val isSnareOnset = snareAllowed && snareFlux > snareThreshold && currentSnareRms > 0.02f
+
+        val highThreshold = max(0.015f, highMean + 1.5f * highStdDev)
+        val isHiHatOnset = hiHatAllowed && highFlux > highThreshold && currentHighRms > 0.015f
+
+        // Spectral Dominance Arbitration between Snare (1.8kHz) and Hi-Hat (5kHz+)
+        val isHighDominant = isHiHatOnset && (highFlux >= snareFlux || currentHighRms > currentSnareRms)
+        val isSnareDominant = isSnareOnset && !isHighDominant
+
+        // 8. Dynamic Velocity Scaling
+        val activeFlux = when {
+            isKickOnset -> bassFlux
+            isSnareDominant -> snareFlux
+            isHighDominant -> highFlux
+            else -> 0f
+        }
+
+        if (activeFlux > 0f) {
+            peakFluxTracker = max(peakFluxTracker * 0.992f, activeFlux).coerceAtLeast(0.04f)
+        }
+        val velocity = if (activeFlux > 0f) {
+            (activeFlux / peakFluxTracker).pow(0.65f).coerceIn(0.35f, 1.0f)
+        } else {
+            0.8f
+        }
+
+        if (isKickOnset) lastKickSample = processedSamplesTotal
+        if (isSnareDominant) lastSnareSample = processedSamplesTotal
+        if (isHighDominant) lastHiHatSample = processedSamplesTotal
 
         return HapticFrame(
             bassIntensity = normalizedBass,
             vocalIntensity = normalizedVocal,
-            transientTrigger = isBassOnset,
-            highTransient = isHighOnset
+            isKickDrum = isKickOnset,
+            isSnareHit = isSnareDominant && !isKickOnset, // Priority to kicks
+            isHiHatTick = isHighDominant && !isKickOnset,
+            dynamicScale = velocity
         )
     }
 
     private fun updateEnvelope(current: Float, target: Float, attack: Float, decay: Float): Float {
         val factor = if (target > current) attack else decay
         return current + factor * (target - current)
+    }
+
+    private fun calculateStats(history: FloatArray, count: Int): Pair<Float, Float> {
+        var sum = 0f
+        for (i in 0 until count) {
+            sum += history[i]
+        }
+        val mean = sum / count
+
+        var sumSqDiff = 0f
+        for (i in 0 until count) {
+            val diff = history[i] - mean
+            sumSqDiff += diff * diff
+        }
+        val variance = sumSqDiff / count
+        val stdDev = sqrt(variance)
+
+        return Pair(mean, stdDev)
     }
 }
 

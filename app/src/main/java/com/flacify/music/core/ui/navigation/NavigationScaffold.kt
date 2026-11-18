@@ -297,10 +297,25 @@ fun NavigationScaffold(
 
         if (isMoreMusicHapticsOpen) {
             val musicHapticsMode by moreViewModel.musicHapticsMode.collectAsStateWithLifecycle()
+            val musicHapticsStrength by moreViewModel.musicHapticsStrength.collectAsStateWithLifecycle()
+            val musicHapticsSyncOffsetMs by moreViewModel.musicHapticsSyncOffsetMs.collectAsStateWithLifecycle()
+
             MusicHapticsSheet(
                 currentMode = musicHapticsMode,
+                currentStrength = musicHapticsStrength,
+                currentSyncOffsetMs = musicHapticsSyncOffsetMs,
+                currentAudioRouteName = moreViewModel.currentAudioRouteName,
                 onModeSelected = { mode ->
                     moreViewModel.setMusicHapticsMode(mode)
+                },
+                onStrengthSelected = { strength ->
+                    moreViewModel.setMusicHapticsStrength(strength)
+                },
+                onSyncOffsetChanged = { offset ->
+                    moreViewModel.setMusicHapticsSyncOffsetMs(offset)
+                },
+                onTestBeatClick = {
+                    moreViewModel.triggerTestBeat()
                 },
                 onDismiss = { isMoreMusicHapticsOpen = false }
             )

@@ -19,6 +19,9 @@ class PcmRingBuffer(capacitySamples: Int = 16384) {
     var sampleRate: Int = 44100
         private set
 
+    val availableRead: Int
+        get() = (writeIndex.get() - readIndex.get()).coerceAtLeast(0)
+
     init {
         require((capacitySamples and mask) == 0) { "Capacity must be a power of two" }
     }

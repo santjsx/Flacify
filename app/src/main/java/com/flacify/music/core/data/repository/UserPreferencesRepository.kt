@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.flacify.music.core.model.AlbumSortOption
 import com.flacify.music.core.model.HapticMode
+import com.flacify.music.core.model.HapticStrength
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -31,6 +32,8 @@ interface UserPreferencesRepository {
     val gaplessEnabled: Flow<Boolean>
     val albumSortOption: Flow<AlbumSortOption>
     val musicHapticsMode: Flow<HapticMode>
+    val musicHapticsStrength: Flow<HapticStrength>
+    val musicHapticsSyncOffsetMs: Flow<Int>
 
     suspend fun setThemeMode(mode: ThemeMode)
     suspend fun setMinTrackDurationSec(seconds: Int)
@@ -38,6 +41,8 @@ interface UserPreferencesRepository {
     suspend fun setGaplessEnabled(enabled: Boolean)
     suspend fun setAlbumSortOption(option: AlbumSortOption)
     suspend fun setMusicHapticsMode(mode: HapticMode)
+    suspend fun setMusicHapticsStrength(strength: HapticStrength)
+    suspend fun setMusicHapticsSyncOffsetMs(offsetMs: Int)
 }
 
 @Singleton
@@ -52,6 +57,8 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val GAPLESS_ENABLED = booleanPreferencesKey("gapless_enabled")
         val ALBUM_SORT_OPTION = stringPreferencesKey("album_sort_option")
         val MUSIC_HAPTICS_MODE = stringPreferencesKey("music_haptics_mode")
+        val MUSIC_HAPTICS_STRENGTH = stringPreferencesKey("music_haptics_strength")
+        val MUSIC_HAPTICS_SYNC_OFFSET_MS = intPreferencesKey("music_haptics_sync_offset_ms")
     }
 
     override val themeMode: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
@@ -93,6 +100,19 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         }
     }
 
+    override val musicHapticsStrength: Flow<HapticStrength> = context.dataStore.data.map { preferences ->
+        val strengthStr = preferences[PreferencesKeys.MUSIC_HAPTICS_STRENGTH] ?: HapticStrength.BALANCED.name
+        try {
+            HapticStrength.valueOf(strengthStr)
+        } catch (_: Exception) {
+            HapticStrength.BALANCED
+        }
+    }
+
+    override val musicHapticsSyncOffsetMs: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.MUSIC_HAPTICS_SYNC_OFFSET_MS] ?: 0
+    }
+
     override suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = mode.name
@@ -126,6 +146,18 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override suspend fun setMusicHapticsMode(mode: HapticMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.MUSIC_HAPTICS_MODE] = mode.name
+        }
+    }
+
+    override suspend fun setMusicHapticsStrength(strength: HapticStrength) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MUSIC_HAPTICS_STRENGTH] = strength.name
+        }
+    }
+
+    override suspend fun setMusicHapticsSyncOffsetMs(offsetMs: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MUSIC_HAPTICS_SYNC_OFFSET_MS] = offsetMs.coerceIn(-60, 120)
         }
     }
 }

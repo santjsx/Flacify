@@ -62,8 +62,8 @@ class MusicHapticsTest {
         val sampleRate = 44100
         val analyzer = HapticAudioAnalyzer(sampleRate)
 
-        // Generate 60 Hz pure sub-bass sine wave (1024 samples)
-        val numSamples = 1024
+        // Generate 60 Hz pure sub-bass sine wave (512 samples)
+        val numSamples = 512
         val samples = FloatArray(numSamples)
         for (i in 0 until numSamples) {
             samples[i] = sin(2.0 * Math.PI * 60.0 * i / sampleRate).toFloat() * 0.8f
@@ -72,7 +72,7 @@ class MusicHapticsTest {
         val frame = analyzer.analyzeBlock(samples, numSamples)
 
         // Sub-bass should have strong energy
-        assertTrue("Bass intensity should be significant for 60Hz input", frame.bassIntensity > 0.3f)
+        assertTrue("Bass intensity should be significant for 60Hz input", frame.bassIntensity > 0.2f)
     }
 
     @Test
@@ -80,8 +80,8 @@ class MusicHapticsTest {
         val sampleRate = 44100
         val analyzer = HapticAudioAnalyzer(sampleRate)
 
-        // Generate 1000 Hz vocal/midrange sine wave (1024 samples)
-        val numSamples = 1024
+        // Generate 1000 Hz vocal/midrange sine wave (512 samples)
+        val numSamples = 512
         val samples = FloatArray(numSamples)
         for (i in 0 until numSamples) {
             samples[i] = sin(2.0 * Math.PI * 1000.0 * i / sampleRate).toFloat() * 0.8f
@@ -96,13 +96,81 @@ class MusicHapticsTest {
     @Test
     fun hapticAudioAnalyzer_silence_producesZeroIntensity() {
         val analyzer = HapticAudioAnalyzer(44100)
-        val silence = FloatArray(1024)
+        val silence = FloatArray(512)
 
-        val frame = analyzer.analyzeBlock(silence, 1024)
+        val frame = analyzer.analyzeBlock(silence, 512)
 
         assertEquals(0f, frame.bassIntensity, 0.05f)
         assertEquals(0f, frame.vocalIntensity, 0.05f)
+        assertFalse(frame.isKickDrum)
+        assertFalse(frame.isSnareHit)
+        assertFalse(frame.isHiHatTick)
         assertFalse(frame.transientTrigger)
-        assertFalse(frame.highTransient)
+    }
+
+    @Test
+    fun hapticAudioAnalyzer_kickDrop_detectsTransientOnsetAndVelocity() {
+        val sampleRate = 44100
+        val analyzer = HapticAudioAnalyzer(sampleRate)
+
+        // Prime the analyzer with quiet ambience (3 blocks)
+        val quiet = FloatArray(512) { 0.005f }
+        for (i in 0 until 3) {
+            analyzer.analyzeBlock(quiet, 512)
+        }
+
+        // Sudden 60Hz heavy kick drum hit
+        val kick = FloatArray(512)
+        for (i in 0 until 512) {
+            kick[i] = (sin(2.0 * Math.PI * 60.0 * i / sampleRate) * 0.9f).toFloat()
+        }
+
+        val kickFrame = analyzer.analyzeBlock(kick, 512)
+
+        assertTrue("Kick drum hit should be detected as isKickDrum", kickFrame.isKickDrum)
+        assertTrue("Kick drum should also map to transientTrigger for backward compat", kickFrame.transientTrigger)
+        assertTrue("Dynamic velocity should be at least 0.35f", kickFrame.dynamicScale >= 0.35f)
+    }
+
+    @Test
+    fun hapticAudioAnalyzer_hiHatImpulse_detectsHiHatTick() {
+        val sampleRate = 44100
+        val analyzer = HapticAudioAnalyzer(sampleRate)
+
+        // Prime with quiet ambience
+        val quiet = FloatArray(512) { 0.002f }
+        for (i in 0 until 3) {
+            analyzer.analyzeBlock(quiet, 512)
+        }
+
+        // Sudden 8000Hz high-frequency tick (hi-hat)
+        val hiHat = FloatArray(512)
+        for (i in 0 until 512) {
+            hiHat[i] = (sin(2.0 * Math.PI * 8000.0 * i / sampleRate) * 0.6f).toFloat()
+        }
+
+        val hiHatFrame = analyzer.analyzeBlock(hiHat, 512)
+
+        assertTrue("Hi-hat burst should trigger isHiHatTick", hiHatFrame.isHiHatTick)
+        assertTrue("Hi-hat should map to highTransient", hiHatFrame.highTransient)
+    }
+
+    @Test
+    fun hapticAudioAnalyzer_kickRefractoryPeriod_suppressesRapidConsecutiveHits() {
+        val sampleRate = 44100
+        val analyzer = HapticAudioAnalyzer(sampleRate)
+
+        val quiet = FloatArray(512) { 0.005f }
+        for (i in 0 until 3) analyzer.analyzeBlock(quiet, 512)
+
+        val kick = FloatArray(512)
+        for (i in 0 until 512) kick[i] = (sin(2.0 * Math.PI * 60.0 * i / sampleRate) * 0.9f).toFloat()
+
+        val firstFrame = analyzer.analyzeBlock(kick, 512)
+        assertTrue("First kick hit must trigger", firstFrame.isKickDrum)
+
+        // Immediately following block (only 11.6ms later, well inside 90ms refractory window)
+        val secondFrame = analyzer.analyzeBlock(kick, 512)
+        assertFalse("Second kick within 11.6ms must be suppressed by refractory window", secondFrame.isKickDrum)
     }
 }

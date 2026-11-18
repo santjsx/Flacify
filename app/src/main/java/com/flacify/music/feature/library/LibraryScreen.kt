@@ -101,13 +101,12 @@ fun LibraryScreen(
     var showAddToPlaylistSong by remember { mutableStateOf<Song?>(null) }
     var showDeletePlaylistConfirm by remember { mutableStateOf(false) }
 
-    // Intercept system Back to dismiss any open sub-views or return to Songs tab
-    BackHandler(enabled = selectedPlaylist != null || selectedAlbum != null || selectedArtist != null || selectedTab != LibraryTab.SONGS) {
+    // Intercept system Back to dismiss any open sub-views (album, artist, or playlist detail)
+    BackHandler(enabled = selectedPlaylist != null || selectedAlbum != null || selectedArtist != null) {
         when {
             selectedPlaylist != null -> viewModel.selectPlaylist(null)
             selectedAlbum != null -> viewModel.selectAlbum(null)
             selectedArtist != null -> viewModel.selectArtist(null)
-            selectedTab != LibraryTab.SONGS -> viewModel.selectTab(LibraryTab.SONGS)
         }
     }
 
