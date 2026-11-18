@@ -3,8 +3,10 @@ package com.flacify.music.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flacify.music.core.data.repository.PlaybackRepository
+import com.flacify.music.core.data.repository.PlaylistRepository
 import com.flacify.music.core.data.repository.SongRepository
 import com.flacify.music.core.data.scanner.ScanStatus
+import com.flacify.music.core.model.Playlist
 import com.flacify.music.core.model.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +30,8 @@ data class HomeUiState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val songRepository: SongRepository,
-    private val playbackRepository: PlaybackRepository
+    private val playbackRepository: PlaybackRepository,
+    private val playlistRepository: PlaylistRepository
 ) : ViewModel() {
 
     val songCount = songRepository.getSongCount()
@@ -44,6 +47,9 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val mostPlayed = songRepository.getMostPlayedSongs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val playlists: StateFlow<List<Playlist>> = playlistRepository.getAllPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val currentPlayingSong = playbackRepository.currentSong
@@ -74,6 +80,45 @@ class HomeViewModel @Inject constructor(
 
     fun skipToNext() {
         playbackRepository.skipToNext()
+    }
+
+    fun playNext(song: Song) {
+        val currentQueue = playbackRepository.queue.value.toMutableList()
+        val current = playbackRepository.currentSong.value
+        val currentIndex = if (current != null) currentQueue.indexOfFirst { it.id == current.id } else -1
+        if (currentIndex >= 0 && currentIndex < currentQueue.size) {
+            currentQueue.add(currentIndex + 1, song)
+        } else {
+            currentQueue.add(song)
+        }
+        if (current == null) {
+            playbackRepository.playSong(song, currentQueue)
+        }
+    }
+
+    fun toggleFavorite(song: Song) {
+        val newFav = !song.isFavorite
+        playbackRepository.updateFavoriteStatus(song.id, newFav)
+        viewModelScope.launch {
+            songRepository.setFavorite(song.id, newFav)
+        }
+    }
+
+    fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch {
+            playlistRepository.addSongToPlaylist(playlistId, songId)
+        }
+    }
+
+    fun createPlaylist(name: String, songIdToAdd: Long? = null) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            val playlistId = playlistRepository.createPlaylist(trimmed)
+            if (songIdToAdd != null) {
+                playlistRepository.addSongToPlaylist(playlistId, songIdToAdd)
+            }
+        }
     }
 }
 
