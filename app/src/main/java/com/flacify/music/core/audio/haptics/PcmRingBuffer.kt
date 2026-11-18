@@ -1,5 +1,6 @@
 package com.flacify.music.core.audio.haptics
 
+import androidx.media3.common.C
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -23,35 +24,74 @@ class PcmRingBuffer(capacitySamples: Int = 16384) {
     }
 
     /**
-     * Writes 16-bit interleaved PCM samples, downmixing to mono float on the fly.
-     * Drops older samples if the buffer overflows to prevent stalling the audio thread.
+     * Writes interleaved PCM samples (16-bit, float, or 24-bit), downmixing to mono float on the fly.
+     * Wrapped in defensive try-catch so it NEVER interrupts or throws on the audio thread.
      */
-    fun write(byteBuffer: ByteBuffer, channels: Int, rate: Int) {
-        if (channels <= 0) return
+    fun write(
+        byteBuffer: ByteBuffer,
+        channels: Int,
+        rate: Int,
+        encoding: Int = C.ENCODING_PCM_16BIT
+    ) {
+        if (channels <= 0 || byteBuffer.remaining() <= 0) return
         sampleRate = rate
-        val shortBuffer = byteBuffer.asShortBuffer()
-        val numFrames = shortBuffer.remaining() / channels
-        if (numFrames <= 0) return
 
-        var currentWrite = writeIndex.get()
-        val currentRead = readIndex.get()
+        try {
+            val dup = byteBuffer.duplicate().order(byteBuffer.order())
+            var currentWrite = writeIndex.get()
+            val currentRead = readIndex.get()
 
-        for (i in 0 until numFrames) {
-            var sum = 0f
-            for (c in 0 until channels) {
-                sum += shortBuffer.get() / 32768.0f
+            when (encoding) {
+                C.ENCODING_PCM_FLOAT -> {
+                    val floatBuf = dup.asFloatBuffer()
+                    val numFrames = floatBuf.remaining() / channels
+                    for (i in 0 until numFrames) {
+                        var sum = 0f
+                        for (c in 0 until channels) {
+                            sum += floatBuf.get()
+                        }
+                        buffer[currentWrite and mask] = sum / channels
+                        currentWrite++
+                    }
+                }
+                C.ENCODING_PCM_24BIT -> {
+                    val bytesPerFrame = channels * 3
+                    val numFrames = dup.remaining() / bytesPerFrame
+                    for (i in 0 until numFrames) {
+                        var sum = 0f
+                        for (c in 0 until channels) {
+                            val b0 = dup.get().toInt() and 0xFF
+                            val b1 = dup.get().toInt() and 0xFF
+                            val b2 = dup.get().toInt() // sign-extended
+                            val sample = (b2 shl 16) or (b1 shl 8) or b0
+                            sum += sample / 8388608.0f
+                        }
+                        buffer[currentWrite and mask] = sum / channels
+                        currentWrite++
+                    }
+                }
+                else -> { // Default 16-bit PCM (C.ENCODING_PCM_16BIT)
+                    val shortBuf = dup.asShortBuffer()
+                    val numFrames = shortBuf.remaining() / channels
+                    for (i in 0 until numFrames) {
+                        var sum = 0f
+                        for (c in 0 until channels) {
+                            sum += shortBuf.get() / 32768.0f
+                        }
+                        buffer[currentWrite and mask] = sum / channels
+                        currentWrite++
+                    }
+                }
             }
-            val monoSample = sum / channels
 
-            // Drop oldest sample if buffer would overflow
-            if ((currentWrite + 1 - currentRead) > buffer.size) {
-                readIndex.lazySet(currentRead + 1)
+            // Drop oldest samples if writeIndex advanced beyond buffer capacity relative to readIndex
+            if (currentWrite - currentRead > buffer.size) {
+                readIndex.lazySet(currentWrite - buffer.size)
             }
-
-            buffer[currentWrite and mask] = monoSample
-            currentWrite++
+            writeIndex.lazySet(currentWrite)
+        } catch (_: Throwable) {
+            // Never let buffer errors disrupt the audio playback thread
         }
-        writeIndex.lazySet(currentWrite)
     }
 
     /**
@@ -62,7 +102,8 @@ class PcmRingBuffer(capacitySamples: Int = 16384) {
         val currentRead = readIndex.get()
         val currentWrite = writeIndex.get()
         val available = currentWrite - currentRead
-        val toRead = minOf(available, size)
+        if (available <= 0) return 0
+        val toRead = minOf(available, size, destination.size)
 
         for (i in 0 until toRead) {
             destination[i] = buffer[(currentRead + i) and mask]

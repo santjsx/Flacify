@@ -4,7 +4,9 @@ import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.flacify.music.core.data.repository.UserPreferencesRepository
 import com.flacify.music.core.model.HapticMode
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,9 +27,38 @@ class MusicHapticsManager @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository
 ) {
     val ringBuffer = PcmRingBuffer(16384)
-    val tapProcessor = HapticAudioTapProcessor(ringBuffer)
     val hardwareController = HardwareHapticController(context)
     private val dspAnalyzer = HapticAudioAnalyzer()
+
+    @Volatile
+    private var streamSampleRate: Int = 44100
+    @Volatile
+    private var streamChannelCount: Int = 2
+    @Volatile
+    private var streamEncoding: Int = C.ENCODING_PCM_16BIT
+
+    /**
+     * Official Media3 non-destructive pass-through audio processor.
+     * Safely taps decoded PCM from any format (FLAC, MP3, AAC, Float, 24-bit) without throwing
+     * UnhandledAudioFormatException and without altering downstream audio.
+     */
+    val teeProcessor = TeeAudioProcessor(object : TeeAudioProcessor.AudioBufferSink {
+        override fun flush(sampleRate: Int, channelCount: Int, encoding: Int) {
+            streamSampleRate = sampleRate
+            streamChannelCount = channelCount
+            streamEncoding = encoding
+            ringBuffer.clear()
+        }
+
+        override fun handleBuffer(buffer: ByteBuffer) {
+            if (_hapticMode.value != HapticMode.OFF) {
+                ringBuffer.write(buffer, streamChannelCount, streamSampleRate, streamEncoding)
+            }
+        }
+    })
+
+    // Alias for backward compatibility
+    val tapProcessor = teeProcessor
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -49,7 +81,6 @@ class MusicHapticsManager @Inject constructor(
             userPreferencesRepository.musicHapticsMode.collectLatest { mode ->
                 _hapticMode.value = mode
                 hardwareController.activeMode = mode
-                tapProcessor.isEnabled = (mode != HapticMode.OFF)
                 if (mode == HapticMode.OFF) {
                     hardwareController.stop()
                 }
@@ -120,6 +151,5 @@ class MusicHapticsManager @Inject constructor(
         activeJob?.cancel()
         activeJob = null
         hardwareController.stop()
-        ringBuffer.clear()
     }
 }

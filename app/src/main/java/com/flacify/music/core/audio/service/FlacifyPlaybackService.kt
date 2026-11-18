@@ -46,9 +46,19 @@ class FlacifyPlaybackService : MediaSessionService() {
                 enableFloatOutput: Boolean,
                 enableAudioTrackPlaybackParams: Boolean
             ): AudioSink? {
-                return DefaultAudioSink.Builder(context)
-                    .setAudioProcessors(arrayOf(musicHapticsManager.tapProcessor))
-                    .build()
+                return try {
+                    DefaultAudioSink.Builder(context)
+                        .setEnableFloatOutput(enableFloatOutput)
+                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                        .setAudioProcessorChain(
+                            DefaultAudioSink.DefaultAudioProcessorChain(
+                                musicHapticsManager.teeProcessor
+                            )
+                        )
+                        .build()
+                } catch (e: Exception) {
+                    super.buildAudioSink(context, enableFloatOutput, enableAudioTrackPlaybackParams)
+                }
             }
         }
 

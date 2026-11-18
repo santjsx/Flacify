@@ -21,9 +21,6 @@ class HapticAudioTapProcessor(
     var isEnabled: Boolean = true
 
     override fun onConfigure(inputAudioFormat: AudioFormat): AudioFormat {
-        if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT) {
-            throw AudioProcessor.UnhandledAudioFormatException(inputAudioFormat)
-        }
         return inputAudioFormat
     }
 
@@ -33,7 +30,7 @@ class HapticAudioTapProcessor(
 
         if (isEnabled) {
             val duplicate = inputBuffer.duplicate()
-            ringBuffer.write(duplicate, inputAudioFormat.channelCount, inputAudioFormat.sampleRate)
+            ringBuffer.write(duplicate, inputAudioFormat.channelCount, inputAudioFormat.sampleRate, inputAudioFormat.encoding)
         }
 
         // Pass-through without alteration

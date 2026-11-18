@@ -110,44 +110,64 @@ class HardwareHapticController(
     }
 
     private fun triggerBeatTransient(motor: Vibrator, intensity: Float) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hasPrimitiveSupport) {
-            val scale = intensity.coerceIn(0.25f, 1.0f)
-            val effect = VibrationEffect.startComposition()
-                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, scale)
-                .compose()
-            vibrateWithAttributes(motor, effect)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val amplitude = (intensity * 255).toInt().coerceIn(40, 255)
-            motor.vibrate(VibrationEffect.createOneShot(25L, amplitude))
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hasPrimitiveSupport) {
+                val scale = intensity.coerceIn(0.25f, 1.0f)
+                val effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, scale)
+                    .compose()
+                vibrateWithAttributes(motor, effect)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val amplitude = (intensity * 255).toInt().coerceIn(40, 255)
+                motor.vibrate(VibrationEffect.createOneShot(25L, amplitude))
+            }
+        } catch (_: Throwable) {
+            // Guard against device restrictions or hardware permission variations
         }
     }
 
     private fun triggerPercussionTick(motor: Vibrator) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hasPrimitiveSupport) {
-            val effect = VibrationEffect.startComposition()
-                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.7f)
-                .compose()
-            vibrateWithAttributes(motor, effect)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hasPrimitiveSupport) {
+                val effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.7f)
+                    .compose()
+                vibrateWithAttributes(motor, effect)
+            }
+        } catch (_: Throwable) {
+            // Guard against device restrictions or hardware permission variations
         }
     }
 
     private fun playContinuousResonance(motor: Vibrator, normalizedIntensity: Float) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val amplitude = (normalizedIntensity * 160).toInt().coerceIn(1, 180)
-            val effect = VibrationEffect.createOneShot(20L, amplitude)
-            vibrateWithAttributes(motor, effect)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val amplitude = (normalizedIntensity * 160).toInt().coerceIn(1, 180)
+                val effect = VibrationEffect.createOneShot(20L, amplitude)
+                vibrateWithAttributes(motor, effect)
+            }
+        } catch (_: Throwable) {
+            // Guard against device restrictions or hardware permission variations
         }
     }
 
     private fun vibrateWithAttributes(motor: Vibrator, effect: VibrationEffect) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && hapticAttributes != null) {
-            motor.vibrate(effect, hapticAttributes)
-        } else {
-            motor.vibrate(effect)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && hapticAttributes != null) {
+                motor.vibrate(effect, hapticAttributes)
+            } else {
+                motor.vibrate(effect)
+            }
+        } catch (_: Throwable) {
+            // Guard against device restrictions or hardware permission variations
         }
     }
 
     fun stop() {
-        vibrator?.cancel()
+        try {
+            vibrator?.cancel()
+        } catch (_: Throwable) {
+            // Ignore cancel errors
+        }
     }
 }
