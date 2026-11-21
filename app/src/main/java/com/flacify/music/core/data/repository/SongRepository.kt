@@ -47,9 +47,9 @@ class SongRepositoryImpl @Inject constructor(
         return Pager(
             config = PagingConfig(
                 pageSize = 50,
-                prefetchDistance = 100,
-                enablePlaceholders = true,
-                maxSize = 250 // Bounded memory buffer for 50,000+ songs
+                prefetchDistance = 50,
+                enablePlaceholders = false,
+                maxSize = 1000 // Bounded memory buffer preventing page eviction churn
             ),
             pagingSourceFactory = {
                 when (sortOption) {

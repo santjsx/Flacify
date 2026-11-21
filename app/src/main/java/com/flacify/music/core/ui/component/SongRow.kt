@@ -2,6 +2,7 @@ package com.flacify.music.core.ui.component
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +23,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
-import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.model.Song
 
 @Composable
@@ -38,7 +38,7 @@ fun SongRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .bounceClick(scaleDown = 0.98f, onClick = onClick)
+            .clickable(onClick = onClick)
             .padding(horizontal = FlacifyTheme.spacing.md, vertical = FlacifyTheme.spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -50,13 +50,14 @@ fun SongRow(
                 .background(FlacifyTheme.colors.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            AsyncImage(
-                model = song.artworkUri,
-                contentDescription = "${song.title} artwork",
-                modifier = Modifier.size(FlacifyTheme.dimensions.songThumbnailSize),
-                contentScale = ContentScale.Crop
-            )
-            if (song.albumId <= 0L && song.remoteArtworkUri == null) {
+            if (song.hasValidArtwork) {
+                AsyncImage(
+                    model = song.artworkUri,
+                    contentDescription = "${song.title} artwork",
+                    modifier = Modifier.size(FlacifyTheme.dimensions.songThumbnailSize),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
                 Icon(
                     imageVector = FlacifyIcons.MusicNote,
                     contentDescription = null,

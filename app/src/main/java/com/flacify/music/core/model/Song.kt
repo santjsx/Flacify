@@ -32,9 +32,17 @@ data class Song(
 ) {
     /**
      * URI for resolving local album artwork thumbnail.
+     * Returns empty string if no valid artwork exists, preventing invalid content resolver queries.
      */
     val artworkUri: String
-        get() = if (isTelegram) remoteArtworkUri.orEmpty() else "content://media/external/audio/albumart/$albumId"
+        get() = when {
+            isTelegram -> remoteArtworkUri?.takeIf { it.isNotBlank() }.orEmpty()
+            albumId > 0L -> "content://media/external/audio/albumart/$albumId"
+            else -> ""
+        }
+
+    val hasValidArtwork: Boolean
+        get() = artworkUri.isNotBlank()
 
     val isTelegram: Boolean get() = mediaUri.startsWith("telegram://")
 
