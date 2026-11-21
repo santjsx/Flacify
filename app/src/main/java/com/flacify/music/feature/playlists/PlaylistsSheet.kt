@@ -46,6 +46,7 @@ import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.model.Playlist
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
 import com.flacify.music.core.ui.component.SongRow
+import com.flacify.music.core.ui.state.FlacifyEmptyStateLayout
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -181,39 +182,14 @@ fun PlaylistsSheet(
                     }
                 }
             } else {
-                // Empty state per PRD Section 18.2
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = FlacifyIcons.Queue,
-                            contentDescription = null,
-                            tint = FlacifyTheme.colors.tertiaryText,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Text(
-                            text = "Create a playlist to organize your music.",
-                            style = FlacifyTheme.typography.primaryContent,
-                            color = FlacifyTheme.colors.secondaryText
-                        )
-                        Button(
-                            onClick = {
-                                showCreateDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                            shape = FlacifyTheme.shapes.small
-                        ) {
-                            Text(text = "Create Playlist", color = FlacifyTheme.colors.primaryText)
-                        }
-                    }
-                }
+                FlacifyEmptyStateLayout(
+                    title = "No Playlists Found",
+                    explanation = "Create your first playlist to organize tracks into customized listening queues.",
+                    icon = FlacifyIcons.Queue,
+                    primaryActionLabel = "Create Playlist",
+                    onPrimaryAction = { showCreateDialog = true },
+                    modifier = Modifier.padding(vertical = FlacifyTheme.spacing.xl)
+                )
             }
         }
     }
@@ -337,21 +313,14 @@ fun PlaylistsSheet(
                         }
                     }
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 36.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "To add songs, open a song’s options in Library and choose Add to Playlist.",
-                                style = FlacifyTheme.typography.secondaryContent,
-                                color = FlacifyTheme.colors.secondaryText
-                            )
-                            TextButton(onClick = onBrowseSongs) { Text("Browse songs") }
-                        }
-                    }
+                    FlacifyEmptyStateLayout(
+                        title = "This Playlist Is Empty",
+                        explanation = "To add tracks, open any song's options menu in Library and select 'Add to Playlist'.",
+                        icon = FlacifyIcons.Queue,
+                        primaryActionLabel = "Browse Songs",
+                        onPrimaryAction = onBrowseSongs,
+                        modifier = Modifier.padding(vertical = FlacifyTheme.spacing.lg)
+                    )
                 }
             }
         }

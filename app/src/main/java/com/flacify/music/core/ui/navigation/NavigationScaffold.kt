@@ -22,10 +22,13 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import com.flacify.music.core.data.network.NetworkConnectivityMonitor
+import com.flacify.music.core.ui.state.FlacifyOfflineBanner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -167,6 +170,9 @@ fun NavigationScaffold(
         navigateTo(NavigationDestination.LIBRARY)
     }
 
+    val networkMonitor = remember { NetworkConnectivityMonitor(context) }
+    val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)
+
     val miniPlayerArtworkMood = rememberArtworkMood(
         artworkUri = currentSong?.artworkUri,
         fallbackColor = FlacifyTheme.colors.background,
@@ -175,21 +181,24 @@ fun NavigationScaffold(
 
     Box(modifier = modifier.fillMaxSize().background(FlacifyTheme.colors.background)) {
         // Main Screen Viewport (Decoupled from dynamic dock height to eliminate 72dp layout shift)
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            AnimatedContent(
-                targetState = currentDestination,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(180, easing = FastOutSlowInEasing)) togetherWith
-                    fadeOut(animationSpec = tween(140, easing = FastOutSlowInEasing))
-                },
-                contentAlignment = Alignment.TopCenter,
-                label = "ScreenTransition",
-                modifier = Modifier.fillMaxSize()
-            ) { destination ->
+            FlacifyOfflineBanner(isOffline = !isOnline)
+
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                AnimatedContent(
+                    targetState = currentDestination,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(180, easing = FastOutSlowInEasing)) togetherWith
+                        fadeOut(animationSpec = tween(140, easing = FastOutSlowInEasing))
+                    },
+                    contentAlignment = Alignment.TopCenter,
+                    label = "ScreenTransition",
+                    modifier = Modifier.fillMaxSize()
+                ) { destination ->
                 when (destination) {
                     NavigationDestination.HOME -> HomeScreen(
                         viewModel = homeViewModel,
@@ -233,6 +242,7 @@ fun NavigationScaffold(
                 }
             }
         }
+    }
 
         // Unified Floating Dock pinned to bottom with zero layout shifts
         Box(

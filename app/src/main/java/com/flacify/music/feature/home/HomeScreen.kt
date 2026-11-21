@@ -60,6 +60,7 @@ import com.flacify.music.core.ui.component.SmoothHandoffLoader
 import com.flacify.music.core.ui.component.SongRow
 import com.flacify.music.core.ui.component.rememberFloatingDockBottomClearance
 import com.flacify.music.core.ui.component.rememberSmoothLoaderVisibility
+import com.flacify.music.core.ui.state.FlacifyEmptyStateLayout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -226,41 +227,13 @@ fun HomeScreen(
         // Empty Library State
         if (songCount == 0 && scanStatus !is ScanStatus.Scanning) {
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = FlacifyTheme.spacing.xl, vertical = FlacifyTheme.spacing.huge),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
-                    ) {
-                        Icon(
-                            imageVector = FlacifyIcons.MusicNote,
-                            contentDescription = null,
-                            tint = FlacifyTheme.colors.tertiaryText,
-                            modifier = Modifier.size(FlacifyTheme.dimensions.iconHuge)
-                        )
-                        Text(
-                            text = "Your music library is empty.",
-                            style = FlacifyTheme.typography.sectionHeading,
-                            color = FlacifyTheme.colors.primaryText
-                        )
-                        Text(
-                            text = "Scan your device to index your local audio files.",
-                            style = FlacifyTheme.typography.albumMetadata,
-                            color = FlacifyTheme.colors.secondaryText
-                        )
-                        Button(
-                            onClick = { viewModel.scanLibrary() },
-                            colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                            shape = FlacifyTheme.shapes.small
-                        ) {
-                            Text("Scan Music", color = FlacifyTheme.colors.primaryText, style = FlacifyTheme.typography.primaryButton)
-                        }
-                    }
-                }
+                FlacifyEmptyStateLayout(
+                    title = "Your Library Is Empty",
+                    explanation = "Scan your device storage to index local lossless audio files and build your library.",
+                    icon = FlacifyIcons.MusicNote,
+                    primaryActionLabel = "Scan Music",
+                    onPrimaryAction = { viewModel.scanLibrary() }
+                )
             }
         }
 

@@ -51,6 +51,9 @@ fun FlacifyGlassTextField(
             focusedContainerColor = if (FlacifyTheme.colors.isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.03f),
             unfocusedContainerColor = if (FlacifyTheme.colors.isDark) Color.White.copy(alpha = 0.03f) else Color.Black.copy(alpha = 0.02f),
             cursorColor = FlacifyTheme.colors.accent,
+            errorBorderColor = FlacifyTheme.colors.error,
+            errorCursorColor = FlacifyTheme.colors.error,
+            errorSupportingTextColor = FlacifyTheme.colors.error,
             focusedTextColor = FlacifyTheme.colors.primaryText,
             unfocusedTextColor = FlacifyTheme.colors.primaryText
         ),

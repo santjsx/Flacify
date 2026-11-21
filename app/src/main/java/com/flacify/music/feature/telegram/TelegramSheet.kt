@@ -29,6 +29,8 @@ import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.telegram.*
 import com.flacify.music.core.ui.component.*
+import com.flacify.music.core.ui.state.FlacifyEmptyStateLayout
+import com.flacify.music.core.ui.state.FlacifyStateBanner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -489,19 +491,14 @@ private fun TelegramChannels(
 
         if (channels.isEmpty() && !busy) {
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No channels indexed yet.\nEnter a public channel above or refresh your joined channels.",
-                        style = FlacifyTheme.typography.bodyMedium,
-                        color = FlacifyTheme.colors.tertiaryText,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                FlacifyEmptyStateLayout(
+                    title = "No Channels Indexed Yet",
+                    explanation = "Enter a public music channel username above or refresh your joined channels list.",
+                    icon = FlacifyIcons.Library,
+                    primaryActionLabel = "Refresh Channels",
+                    onPrimaryAction = vm::refreshChannels,
+                    modifier = Modifier.padding(vertical = FlacifyTheme.spacing.lg)
+                )
             }
         } else {
             items(channels, key = { it.chatId }) { channel ->
@@ -659,19 +656,14 @@ private fun TelegramTracks(vm: TelegramViewModel, channel: TelegramChannel, busy
                 }
                 if (tracks.isEmpty() && !busy) {
                     item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No audio tracks indexed yet.\nTap 'Refresh' or 'Sync All' to fetch tracks from this channel.",
-                                style = FlacifyTheme.typography.bodyMedium,
-                                color = FlacifyTheme.colors.tertiaryText,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        FlacifyEmptyStateLayout(
+                            title = "No Audio Tracks Found",
+                            explanation = "This channel doesn't have any audio files yet, or indexing is still in progress.",
+                            icon = FlacifyIcons.MusicNote,
+                            primaryActionLabel = "Refresh Channel",
+                            onPrimaryAction = { vm.refresh() },
+                            modifier = Modifier.padding(vertical = FlacifyTheme.spacing.lg)
+                        )
                     }
                 }
                 if (more && !busy) {

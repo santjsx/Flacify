@@ -67,6 +67,9 @@ import com.flacify.music.core.ui.component.FlacifyGlassMenuItem
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
 import com.flacify.music.core.ui.component.SongRow
 import com.flacify.music.core.ui.component.rememberFloatingDockBottomClearance
+import com.flacify.music.core.ui.state.FlacifyEmptyStateLayout
+import com.flacify.music.core.ui.state.FlacifyErrorStateLayout
+import com.flacify.music.core.ui.state.FlacifyStateLoader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -252,62 +255,16 @@ fun LibraryScreen(
         when (selectedTab) {
             LibraryTab.PLAYLISTS -> {
                 if (playlists.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = FlacifyTheme.spacing.xxl, vertical = FlacifyTheme.spacing.huge),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(FlacifyTheme.dimensions.playButtonHeroSize)
-                                    .clip(FlacifyTheme.shapes.medium)
-                                    .background(FlacifyTheme.colors.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = FlacifyIcons.Queue,
-                                    contentDescription = null,
-                                    tint = FlacifyTheme.colors.accent,
-                                    modifier = Modifier.size(FlacifyTheme.dimensions.iconLarge)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(FlacifyTheme.spacing.md))
-                            Text(
-                                text = "No Playlists Yet",
-                                style = FlacifyTheme.typography.sectionHeading,
-                                color = FlacifyTheme.colors.primaryText
-                            )
-                            Spacer(modifier = Modifier.height(FlacifyTheme.spacing.xxs))
-                            Text(
-                                text = "Create your first playlist to organize your favorite music.",
-                                style = FlacifyTheme.typography.bodyMedium,
-                                color = FlacifyTheme.colors.secondaryText,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(FlacifyTheme.spacing.lg))
-                            Button(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    showNewPlaylistDialog = true
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                                shape = FlacifyTheme.shapes.medium
-                            ) {
-                                Icon(imageVector = FlacifyIcons.Add, contentDescription = null, tint = FlacifyTheme.colors.primaryText)
-                                Spacer(modifier = Modifier.width(FlacifyTheme.spacing.xxs))
-                                Text(
-                                    text = "New Playlist",
-                                    color = FlacifyTheme.colors.primaryText,
-                                    style = FlacifyTheme.typography.primaryButton
-                                )
-                            }
+                    FlacifyEmptyStateLayout(
+                        title = "No Playlists Yet",
+                        explanation = "Create your first playlist to organize tracks into customized listening queues.",
+                        icon = FlacifyIcons.Queue,
+                        primaryActionLabel = "New Playlist",
+                        onPrimaryAction = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showNewPlaylistDialog = true
                         }
-                    }
+                    )
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -329,39 +286,26 @@ fun LibraryScreen(
             LibraryTab.SONGS -> {
                 val refresh = pagedSongs.loadState.refresh
                 if (pagedSongs.itemCount == 0) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = FlacifyTheme.spacing.xxl, vertical = FlacifyTheme.spacing.huge),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(FlacifyTheme.spacing.xl),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.sm)
-                        ) {
-                            when {
-                                isScanning || refresh is LoadState.Loading -> {
-                                    CircularProgressIndicator(color = FlacifyTheme.colors.accent)
-                                    Text(if (isScanning) "Scanning library…" else "Loading library…", color = FlacifyTheme.colors.secondaryText)
-                                }
-                                refresh is LoadState.Error -> {
-                                    Text("Couldn’t load your library.", color = FlacifyTheme.colors.primaryText)
-                                    TextButton(onClick = pagedSongs::retry) { Text("Try again") }
-                                }
-                                else -> {
-                                    Text("No music in your library yet", style = FlacifyTheme.typography.heading2, color = FlacifyTheme.colors.primaryText)
-                                    Text("Add audio files to your device, then scan for songs.", color = FlacifyTheme.colors.secondaryText, textAlign = TextAlign.Center)
-                                    Spacer(modifier = Modifier.height(FlacifyTheme.spacing.sm))
-                                    Button(
-                                        onClick = onScanLibrary,
-                                        colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                                        shape = FlacifyTheme.shapes.medium
-                                    ) {
-                                        Text("Scan library", color = FlacifyTheme.colors.primaryText)
-                                    }
-                                }
-                            }
+                    when {
+                        isScanning || refresh is LoadState.Loading -> {
+                            FlacifyStateLoader(text = if (isScanning) "Scanning local storage for music…" else "Loading library…")
+                        }
+                        refresh is LoadState.Error -> {
+                            FlacifyErrorStateLayout(
+                                title = "Couldn’t Load Library",
+                                explanation = "We encountered an issue reading your local audio tracks. Tap below to retry.",
+                                retryLabel = "Try Again",
+                                onRetry = pagedSongs::retry
+                            )
+                        }
+                        else -> {
+                            FlacifyEmptyStateLayout(
+                                title = "No Music In Library",
+                                explanation = "Add audio files (FLAC, MP3, WAV) to your device storage, then scan for songs.",
+                                icon = FlacifyIcons.MusicNote,
+                                primaryActionLabel = "Scan Library",
+                                onPrimaryAction = onScanLibrary
+                            )
                         }
                     }
                 } else {
@@ -448,32 +392,16 @@ fun LibraryScreen(
 
             LibraryTab.ALBUMS -> {
                 if (albums.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = FlacifyTheme.spacing.xxl, vertical = FlacifyTheme.spacing.huge),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.sm)
-                        ) {
-                            if (isScanning) {
-                                CircularProgressIndicator(color = FlacifyTheme.colors.accent)
-                                Text("Scanning library…", color = FlacifyTheme.colors.secondaryText)
-                            } else {
-                                Text("No albums yet", style = FlacifyTheme.typography.heading2, color = FlacifyTheme.colors.primaryText)
-                                Text("Add audio files to your device, then scan for songs.", color = FlacifyTheme.colors.secondaryText, textAlign = TextAlign.Center)
-                                Spacer(modifier = Modifier.height(FlacifyTheme.spacing.sm))
-                                Button(
-                                    onClick = onScanLibrary,
-                                    colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                                    shape = FlacifyTheme.shapes.medium
-                                ) {
-                                    Text("Scan library", color = FlacifyTheme.colors.primaryText)
-                                }
-                            }
-                        }
+                    if (isScanning) {
+                        FlacifyStateLoader(text = "Scanning library for albums…")
+                    } else {
+                        FlacifyEmptyStateLayout(
+                            title = "No Albums Found",
+                            explanation = "Albums will appear here once audio files with album metadata are added to your device.",
+                            icon = FlacifyIcons.Album,
+                            primaryActionLabel = "Scan Library",
+                            onPrimaryAction = onScanLibrary
+                        )
                     }
                 } else {
                     LazyVerticalGrid(
@@ -502,32 +430,16 @@ fun LibraryScreen(
 
             LibraryTab.ARTISTS -> {
                 if (artists.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = FlacifyTheme.spacing.xxl, vertical = FlacifyTheme.spacing.huge),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.sm)
-                        ) {
-                            if (isScanning) {
-                                CircularProgressIndicator(color = FlacifyTheme.colors.accent)
-                                Text("Scanning library…", color = FlacifyTheme.colors.secondaryText)
-                            } else {
-                                Text("No artists yet", style = FlacifyTheme.typography.heading2, color = FlacifyTheme.colors.primaryText)
-                                Text("Add audio files to your device, then scan for songs.", color = FlacifyTheme.colors.secondaryText, textAlign = TextAlign.Center)
-                                Spacer(modifier = Modifier.height(FlacifyTheme.spacing.sm))
-                                Button(
-                                    onClick = onScanLibrary,
-                                    colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                                    shape = FlacifyTheme.shapes.medium
-                                ) {
-                                    Text("Scan library", color = FlacifyTheme.colors.primaryText)
-                                }
-                            }
-                        }
+                    if (isScanning) {
+                        FlacifyStateLoader(text = "Scanning library for artists…")
+                    } else {
+                        FlacifyEmptyStateLayout(
+                            title = "No Artists Found",
+                            explanation = "Artists will appear here once audio files with artist metadata are added to your device.",
+                            icon = FlacifyIcons.Artist,
+                            primaryActionLabel = "Scan Library",
+                            onPrimaryAction = onScanLibrary
+                        )
                     }
                 } else {
                     LazyColumn(

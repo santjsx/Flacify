@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.sp
 import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.model.Song
+import com.flacify.music.core.ui.state.FlacifyEmptyStateLayout
+import com.flacify.music.core.ui.state.FlacifyStateLoader
 import com.flacify.music.feature.nowplaying.LyricsUiState
 import kotlinx.coroutines.delay
 
@@ -155,140 +157,44 @@ fun LyricsScreen(
 
             when (lyricsUiState) {
                 is LyricsUiState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .navigationBarsPadding(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(36.dp),
-                                color = FlacifyTheme.colors.accent,
-                                strokeWidth = 3.dp
-                            )
-                            Text(
-                                text = "Finding lyrics...",
-                                style = FlacifyTheme.typography.bodyMedium,
-                                color = FlacifyTheme.colors.secondaryText
-                            )
-                        }
-                    }
+                    FlacifyStateLoader(
+                        text = "Finding lyrics for “${song.title}”...",
+                        modifier = Modifier.navigationBarsPadding()
+                    )
                 }
 
                 is LyricsUiState.Empty -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(FlacifyTheme.spacing.xxl)
-                            .navigationBarsPadding(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
-                        ) {
-                            Icon(
-                                imageVector = FlacifyIcons.Lyrics,
-                                contentDescription = null,
-                                tint = FlacifyTheme.colors.tertiaryText,
-                                modifier = Modifier.size(FlacifyTheme.dimensions.iconHuge)
-                            )
-                            Text(
-                                text = "No lyrics available",
-                                style = FlacifyTheme.typography.heading2,
-                                color = FlacifyTheme.colors.primaryText
-                            )
-                            Text(
-                                text = lyricsUiState.reason.ifBlank {
-                                    "Place an .lrc file in the audio folder or import one directly."
-                                },
-                                style = FlacifyTheme.typography.bodyMedium,
-                                color = FlacifyTheme.colors.secondaryText,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Button(
-                                onClick = { lrcPickerLauncher.launch("*/*") },
-                                colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                                shape = FlacifyTheme.shapes.pill
-                            ) {
-                                Text(
-                                    text = "Import .lrc / .txt",
-                                    color = FlacifyTheme.colors.primaryText,
-                                    style = FlacifyTheme.typography.primaryButton
-                                )
-                            }
-
-                            OutlinedButton(
-                                onClick = onRetry,
-                                shape = FlacifyTheme.shapes.pill
-                            ) {
-                                Icon(
-                                    imageVector = FlacifyIcons.Refresh,
-                                    contentDescription = null,
-                                    tint = FlacifyTheme.colors.secondaryText,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Search Online Again",
-                                    color = FlacifyTheme.colors.secondaryText,
-                                    style = FlacifyTheme.typography.secondaryContent
-                                )
-                            }
-                        }
-                    }
+                    FlacifyEmptyStateLayout(
+                        title = "No Lyrics Available",
+                        explanation = lyricsUiState.reason.ifBlank {
+                            "Place an .lrc file in your audio directory or import one directly from device storage."
+                        },
+                        icon = FlacifyIcons.Lyrics,
+                        primaryActionLabel = "Import .LRC / .TXT",
+                        onPrimaryAction = { lrcPickerLauncher.launch("*/*") },
+                        secondaryActionLabel = "Search Online Again",
+                        onSecondaryAction = onRetry,
+                        modifier = Modifier.navigationBarsPadding()
+                    )
                 }
 
                 is LyricsUiState.Success -> {
                     if (lyricsUiState.isInstrumental) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .navigationBarsPadding(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.md)
-                            ) {
-                                Icon(
-                                    imageVector = FlacifyIcons.MusicNote,
-                                    contentDescription = null,
-                                    tint = FlacifyTheme.colors.tertiaryText,
-                                    modifier = Modifier.size(FlacifyTheme.dimensions.iconHuge)
-                                )
-                                Text(
-                                    text = "Instrumental Track",
-                                    style = FlacifyTheme.typography.heading2,
-                                    color = FlacifyTheme.colors.primaryText
-                                )
-                                Text(
-                                    text = "This song has no vocal lyrics.",
-                                    style = FlacifyTheme.typography.bodyMedium,
-                                    color = FlacifyTheme.colors.secondaryText
-                                )
-                            }
-                        }
+                        FlacifyEmptyStateLayout(
+                            title = "Instrumental Track",
+                            explanation = "This audio track has no vocal lyrics.",
+                            icon = FlacifyIcons.AudioWaveform,
+                            modifier = Modifier.navigationBarsPadding()
+                        )
                     } else if (lyricsUiState.lyrics.lines.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .navigationBarsPadding(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No lyrics found",
-                                style = FlacifyTheme.typography.heading2,
-                                color = FlacifyTheme.colors.secondaryText
-                            )
-                        }
+                        FlacifyEmptyStateLayout(
+                            title = "No Lyrics Found",
+                            explanation = "We couldn't find lyrics for this song. You can import a local .lrc file.",
+                            icon = FlacifyIcons.Lyrics,
+                            primaryActionLabel = "Import .LRC File",
+                            onPrimaryAction = { lrcPickerLauncher.launch("*/*") },
+                            modifier = Modifier.navigationBarsPadding()
+                        )
                     } else {
                         // Render Lyrics (Synchronized or Unsynchronized)
                         LazyColumn(

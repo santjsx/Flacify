@@ -44,6 +44,7 @@ import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
 import com.flacify.music.core.ui.component.SongRow
+import com.flacify.music.core.ui.state.FlacifyEmptyStateLayout
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,34 +183,14 @@ fun FavoritesSheet(
                     }
                 }
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = FlacifyIcons.HeartOutline,
-                            contentDescription = null,
-                            tint = FlacifyTheme.colors.tertiaryText,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(FlacifyTheme.spacing.sm))
-                        Text(
-                            text = "No favorite songs yet.",
-                            style = FlacifyTheme.typography.bodyLarge,
-                            color = FlacifyTheme.colors.primaryText
-                        )
-                        Spacer(modifier = Modifier.height(FlacifyTheme.spacing.xxs))
-                        Text(
-                            text = "Open a song’s options in Library and choose Add to Favorites.",
-                            style = FlacifyTheme.typography.bodyMedium,
-                            color = FlacifyTheme.colors.secondaryText
-                        )
-                        TextButton(onClick = onBrowseSongs) { Text("Browse songs") }
-                    }
-                }
+                FlacifyEmptyStateLayout(
+                    title = "No Favorite Songs Yet",
+                    explanation = "Tap the heart icon or choose 'Add to Favorites' from any track options to collect your favorite music.",
+                    icon = FlacifyIcons.HeartOutline,
+                    primaryActionLabel = "Browse Songs",
+                    onPrimaryAction = onBrowseSongs,
+                    modifier = Modifier.padding(vertical = FlacifyTheme.spacing.xl)
+                )
             }
         }
     }

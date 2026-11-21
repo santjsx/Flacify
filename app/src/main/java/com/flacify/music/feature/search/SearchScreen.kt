@@ -43,6 +43,8 @@ import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.ui.component.SongRow
 import com.flacify.music.core.ui.component.rememberFloatingDockBottomClearance
+import com.flacify.music.core.ui.state.FlacifyEmptyStateLayout
+import com.flacify.music.core.ui.state.FlacifyStateLoader
 
 enum class SearchFilter(val title: String) {
     ALL("All"),
@@ -196,22 +198,26 @@ fun SearchScreen(
         }
 
         // Search Results List
-        if (!isSearching && query.isNotBlank() && filteredResults.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = FlacifyTheme.spacing.huge),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("No matches found", style = FlacifyTheme.typography.bodyMedium, color = FlacifyTheme.colors.secondaryText)
-                    TextButton(onClick = {
-                        viewModel.clearQuery()
-                        focus.requestFocus()
-                        keyboard?.show()
-                    }) { Text("Try another search") }
+        if (query.isBlank()) {
+            FlacifyEmptyStateLayout(
+                title = "Search Your Music",
+                explanation = "Find any track, album, or artist across your lossless audio collection.",
+                icon = FlacifyIcons.Search
+            )
+        } else if (isSearching) {
+            FlacifyStateLoader(text = "Searching library…")
+        } else if (filteredResults.isEmpty()) {
+            FlacifyEmptyStateLayout(
+                title = "No Matches Found",
+                explanation = "No songs, albums, or artists matched “$query”. Check the spelling or try searching for another track.",
+                icon = FlacifyIcons.Search,
+                primaryActionLabel = "Clear & Try Again",
+                onPrimaryAction = {
+                    viewModel.clearQuery()
+                    focus.requestFocus()
+                    keyboard?.show()
                 }
-            }
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

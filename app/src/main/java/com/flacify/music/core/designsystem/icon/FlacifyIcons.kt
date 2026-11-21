@@ -364,4 +364,58 @@ object FlacifyIcons {
             lucidePath("M12 18h.01")
         }
     }
+
+    val Warning: ImageVector by lazy {
+        lucideIcon("FLACifyWarning") {
+            lucidePath("m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z")
+            lucidePath("M12 9v4")
+            lucidePath("M12 17h.01")
+        }
+    }
+
+    val ErrorCircle: ImageVector by lazy {
+        lucideIcon("FLACifyErrorCircle") {
+            lucidePath("M 3.0 12.0 a 9.0 9.0 0 1 0 18.0 0 a 9.0 9.0 0 1 0 -18.0 0")
+            lucidePath("M12 8v4")
+            lucidePath("M12 16h.01")
+        }
+    }
+
+    val CheckCircle: ImageVector by lazy {
+        lucideIcon("FLACifyCheckCircle") {
+            lucidePath("M 3.0 12.0 a 9.0 9.0 0 1 0 18.0 0 a 9.0 9.0 0 1 0 -18.0 0")
+            lucidePath("m9 12 2 2 4-4")
+        }
+    }
+
+    val CloudOff: ImageVector by lazy {
+        lucideIcon("FLACifyCloudOff") {
+            lucidePath("m2 2 20 20")
+            lucidePath("M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193")
+            lucidePath("M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07")
+        }
+    }
+
+    val Download: ImageVector by lazy {
+        lucideIcon("FLACifyDownload") {
+            lucidePath("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4")
+            lucidePath("m7 10 5 5 5-5")
+            lucidePath("M12 15V3")
+        }
+    }
+
+    val Upload: ImageVector by lazy {
+        lucideIcon("FLACifyUpload") {
+            lucidePath("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4")
+            lucidePath("m17 8-5-5-5 5")
+            lucidePath("M12 3v12")
+        }
+    }
+
+    val Lock: ImageVector by lazy {
+        lucideIcon("FLACifyLock") {
+            lucidePath("M7 11V7a5 5 0 0 1 10 0v4")
+            lucidePath("M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z")
+        }
+    }
 }
