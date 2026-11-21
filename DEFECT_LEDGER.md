@@ -2,7 +2,7 @@
 
 **Project**: FLACify v1.0  
 **Status**: Phases 1–7 100% Built, Tested, and Verified against Main PRD  
-**Last Updated**: November 2, 2026  
+**Last Updated**: November 21, 2026  
 
 ---
 
@@ -57,6 +57,15 @@
 | DEF-031 | Post-P7 | Recently Added Three Dots Menu Inactive | Medium | Tapping the three dots (`FlacifyIcons.More`) button on any song in the Recently Added section of `HomeScreen` did nothing because `onMoreClick = { /* More actions */ }` was hardcoded as a no-op placeholder lambda; `HomeViewModel` also lacked playlist and queue manipulation delegates | Resolved | 1) Injected `PlaylistRepository` into `HomeViewModel` and exposed `playlists`, `playNext`, `toggleFavorite`, `addSongToPlaylist`, and `createPlaylist`; 2) wired `onMoreClick` in `HomeScreen.kt` with tactile haptics (`TextHandleMove`) and connected `FlacifyGlassSheet` song options menu ("Play Next", "Add/Remove from Favorites", "Add to Playlist..."); 3) integrated `ModalBottomSheet` playlist selector and frosted `FlacifyGlassDialog` for inline new playlist creation; 4) registered dedicated hierarchical `BackHandler` so sheet dismissal never fires double-back home exit; 5) verified with 4 new unit tests in `HomeViewModelTest.kt` (63/63 passing) |
 | DEF-032 | Post-P7 | Library song selection | High | A row tap used its absolute paging index in a queue built from the first 100 rows with placeholders removed. An out-of-range index selected the first song. | Resolved | Library rows now resolve the tapped song by ID in the loaded queue and play it on its own if a refresh removed it. On a 112-song emulator library, tapping “You Rock My World” previously played track one. The patched build played the selected song and Skip Next advanced to the following row. Both regression tests and the full 65-test suite passed. |
 
+| DEF-033 | Post-P7 | Collections | High | The playlist sheet deleted playlists immediately. Overflow buttons removed tracks or favorites without identifying the action. | Resolved | Playlist deletion and collection removals name the target and require confirmation. Song rows expose the action label to accessibility services. |
+| DEF-034 | Post-P7 | Playlist creation and sleep timer | Medium | Blank names and invalid durations produced no field error. Library discarded the selected song when creating a playlist from song options. Other entry points announced success before the database write finished. | Resolved | Forms report errors beside the input. All playlist entry points await persistence, and Room creates the playlist and its first track together. |
+| DEF-035 | Post-P7 | Library and Search | Medium | An empty Songs tab offered no action. Search displayed stale results or a premature empty state during its debounce. | Resolved | Library provides scan and retry actions. Search associates results with their query and offers another search after an empty result. |
+| DEF-036 | Post-P7 | Settings feedback | Medium | Scan completion feedback lived on Home, and clearing the artwork disk cache blocked the UI thread. | Resolved | The navigation host presents scan outcomes across tabs. Cache clearing runs on the I/O dispatcher and reports the outcome after completion. |
+
+| DEF-037 | Telegram integration | Streaming and track identity | High | TDLib file IDs can change between sessions. Treating a partially downloaded file as complete can also return bytes from outside its downloaded range. | Resolved | Resolve the indexed chat/message pair at playback, track the current contiguous byte range, and cancel blocked reads on close. JVM tests cover offsets, bounded reads, and cancellation. Android tests cover JNI startup, account isolation, and stable playback IDs after a file ID change. |
+| DEF-038 | Public release | Telegram app credentials | High | Reading local credentials in the shared Gradle variant would embed the developer's hash in a distributed APK. | Resolved | Limit local build credentials to debug. Public builds accept credentials on-device and store them encrypted under Android Keystore. |
+| DEF-039 | Release Build | R8 Minification & Keep Rules Hardening | Medium | R8 full-mode minification risked obfuscating or stripping Room entities/DAOs, Media3 core/datasource classes, kotlinx.serialization API models (`LrclibResponse`, `GitHubRelease`), and native JNI methods, leading to potential runtime linkage or JSON deserialization failures in release APK. | Resolved | Hardened `proguard-rules.pro` with explicit rules for Room `@Entity` and `@Dao`, Media3 (`common`, `datasource`, `session`, `exoplayer`), kotlinx.serialization (`@Serializable class *` and companion serializers), and native methods (`-keepclasseswithmembernames class * { native <methods>; }`). Executed full release assembly (`minifyReleaseWithR8`, `shrinkReleaseRes`, `optimizeReleaseResources`, `assembleRelease`) and verified 100% test pass (69/69 passing). |
+
 ---
 
 ## 3. Performance Budget Tracking
@@ -68,5 +77,5 @@
 | **Main-Thread I/O Violations** | Exactly 0 | 0 (All Room & MediaStore via Dispatchers.IO) | Strict Coroutine Dispatching | Passed |
 | **Scrubber Touch Target** | >= 44 dp | 44 dp touch box with 4dp/8dp visual track | Touch Pointer Modifier | Passed |
 | **APK Build (Debug)** | Successful APK assembly | `app-debug.apk` (71.1 MB) | AGP 8.7.2 + Kotlin 2.0.21 | Passed |
-| **APK Build (Release - R8)**| < 15 MB | `app-release.apk` (6.69 MB) | R8 Minify + Proguard + ShrinkResources | Passed |
-| **Unit Test Suite** | 100% Passing | 65 / 65 Passed | JUnit4 + MockK + CoroutinesTest | Passed |
+| **APK Build (Release - R8)**| Universal (4 ABIs) | `app-release.apk` (96.1 MB, TDLib C++ JNI ~91 MB uncompressed, classes.dex ~7.6 MB) | R8 Minify + Proguard + ShrinkResources | Passed |
+| **Unit Test Suite** | 100% Passing | 69 / 69 Passed | JUnit4 + MockK + CoroutinesTest | Passed |
