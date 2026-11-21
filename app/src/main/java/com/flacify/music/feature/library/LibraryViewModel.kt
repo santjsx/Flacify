@@ -186,8 +186,14 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun playSong(song: Song) {
-        playbackRepository.playSong(song)
+    fun playSong(song: Song, songs: List<Song> = emptyList()) {
+        val startIndex = songs.indexOfFirst { it.id == song.id }
+        if (startIndex >= 0) {
+            playbackRepository.playQueue(songs, startIndex)
+        } else {
+            // Paging may have refreshed between displaying the row and handling the tap.
+            playbackRepository.playSong(song)
+        }
     }
 
     fun playQueue(songs: List<Song>, startIndex: Int = 0) {

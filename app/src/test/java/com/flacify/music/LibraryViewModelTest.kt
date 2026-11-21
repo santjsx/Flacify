@@ -171,6 +171,28 @@ class LibraryViewModelTest {
         viewModel.playQueue(queue, 0)
         coVerify { playbackRepository.playSong(sampleSong, queue) }
     }
+
+    @Test
+    fun tappingSongBeyondFirstHundredStartsAtItsPositionInTheLoadedQueue() = runTest(testDispatcher) {
+        val viewModel = LibraryViewModel(songRepository, playbackRepository, playlistRepository, userPreferencesRepository)
+        val queue = (250L downTo 101L).map { sampleSong.copy(id = it, mediaUri = "content://media/$it") }
+        val tappedSong = queue[120].copy(isFavorite = true)
+
+        viewModel.playSong(tappedSong, queue)
+
+        coVerify(exactly = 1) { playbackRepository.playQueue(queue, 120) }
+    }
+
+    @Test
+    fun tappingSongDuringPageRefreshStillPlaysThatSong() = runTest(testDispatcher) {
+        val viewModel = LibraryViewModel(songRepository, playbackRepository, playlistRepository, userPreferencesRepository)
+        val refreshedQueue = listOf(sampleSong.copy(id = 202L))
+
+        viewModel.playSong(sampleSong, refreshedQueue)
+
+        coVerify(exactly = 1) { playbackRepository.playSong(sampleSong) }
+        coVerify(exactly = 0) { playbackRepository.playQueue(any(), any()) }
+    }
 }
 
 // test

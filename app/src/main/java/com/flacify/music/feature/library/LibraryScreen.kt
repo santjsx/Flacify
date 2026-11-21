@@ -394,8 +394,7 @@ fun LibraryScreen(
                                 isPlaying = currentSong?.id == song.id && isPlaying,
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    val currentItems = (0 until minOf(pagedSongs.itemCount, 100)).mapNotNull { pagedSongs[it] }
-                                    viewModel.playQueue(currentItems, index)
+                                    viewModel.playSong(song, pagedSongs.itemSnapshotList.items)
                                 },
                                 onMoreClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -474,8 +473,7 @@ fun LibraryScreen(
                 },
                 onSongClick = { song ->
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    val index = selectedPlaylistSongs.indexOfFirst { it.id == song.id }
-                    viewModel.playQueue(selectedPlaylistSongs, if (index >= 0) index else 0)
+                    viewModel.playSong(song, selectedPlaylistSongs)
                 },
                 onSongMoreClick = { song ->
                     selectedSongForOptions = song
@@ -551,8 +549,7 @@ fun LibraryScreen(
                 },
                 onSongClick = { song ->
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    val index = selectedAlbumSongs.indexOfFirst { it.id == song.id }
-                    viewModel.playQueue(selectedAlbumSongs, if (index >= 0) index else 0)
+                    viewModel.playSong(song, selectedAlbumSongs)
                 },
                 onSongMoreClick = { song ->
                     selectedSongForOptions = song
@@ -581,8 +578,7 @@ fun LibraryScreen(
                 },
                 onSongClick = { song ->
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    val index = selectedArtistSongs.indexOfFirst { it.id == song.id }
-                    viewModel.playQueue(selectedArtistSongs, if (index >= 0) index else 0)
+                    viewModel.playSong(song, selectedArtistSongs)
                 },
                 onSongMoreClick = { song ->
                     selectedSongForOptions = song
