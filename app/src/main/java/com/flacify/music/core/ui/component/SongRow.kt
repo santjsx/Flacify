@@ -1,5 +1,6 @@
 package com.flacify.music.core.ui.component
 
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,8 +30,10 @@ fun SongRow(
     song: Song,
     isPlaying: Boolean,
     onClick: () -> Unit,
-    onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onMoreClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    actionIcon: ImageVector = FlacifyIcons.More,
+    actionLabel: String = "Song options"
 ) {
     Row(
         modifier = modifier
@@ -48,12 +51,12 @@ fun SongRow(
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = "content://media/external/audio/albumart/${song.albumId}",
+                model = song.artworkUri,
                 contentDescription = "${song.title} artwork",
                 modifier = Modifier.size(FlacifyTheme.dimensions.songThumbnailSize),
                 contentScale = ContentScale.Crop
             )
-            if (song.albumId <= 0L) {
+            if (song.albumId <= 0L && song.remoteArtworkUri == null) {
                 Icon(
                     imageVector = FlacifyIcons.MusicNote,
                     contentDescription = null,
@@ -94,17 +97,18 @@ fun SongRow(
             color = FlacifyTheme.colors.tertiaryText
         )
 
-        // Overflow More button
-        IconButton(
-            onClick = onMoreClick,
-            modifier = Modifier.size(FlacifyTheme.dimensions.skipButtonSize)
-        ) {
-            Icon(
-                imageVector = FlacifyIcons.More,
-                contentDescription = "Song options",
-                tint = FlacifyTheme.colors.secondaryText,
-                modifier = Modifier.size(FlacifyTheme.dimensions.iconMedium)
-            )
+        if (onMoreClick != null) {
+            IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(FlacifyTheme.dimensions.minTouchTarget)
+            ) {
+                Icon(
+                    imageVector = actionIcon,
+                    contentDescription = actionLabel,
+                    tint = FlacifyTheme.colors.secondaryText,
+                    modifier = Modifier.size(FlacifyTheme.dimensions.iconMedium)
+                )
+            }
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.flacify.music.feature.more
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -148,7 +150,7 @@ class MoreViewModel @Inject constructor(
     }
 
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
-    fun clearArtworkCache(context: Context) {
+    suspend fun clearArtworkCache(context: Context) = withContext(Dispatchers.IO) {
         Coil.imageLoader(context).diskCache?.clear()
         Coil.imageLoader(context).memoryCache?.clear()
     }

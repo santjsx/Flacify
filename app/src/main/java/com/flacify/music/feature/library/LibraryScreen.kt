@@ -1,5 +1,10 @@
 package com.flacify.music.feature.library
 
+import com.flacify.music.feature.playlists.AddToPlaylistSheet
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.paging.LoadState
+import com.flacify.music.core.ui.component.ConfirmRemovalDialog
+import com.flacify.music.feature.playlists.NewPlaylistDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,18 +55,15 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
-import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.model.Album
 import com.flacify.music.core.model.AlbumSortOption
 import com.flacify.music.core.model.Artist
 import com.flacify.music.core.model.Playlist
 import com.flacify.music.core.model.Song
 import com.flacify.music.core.model.SortOption
-import com.flacify.music.core.ui.component.FlacifyGlassDialog
 import com.flacify.music.core.ui.component.FlacifyGlassDropdownMenu
 import com.flacify.music.core.ui.component.FlacifyGlassMenuItem
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
-import com.flacify.music.core.ui.component.FlacifyGlassTextField
 import com.flacify.music.core.ui.component.SongRow
 import com.flacify.music.core.ui.component.rememberFloatingDockBottomClearance
 
@@ -69,6 +71,8 @@ import com.flacify.music.core.ui.component.rememberFloatingDockBottomClearance
 @Composable
 fun LibraryScreen(
     viewModel: LibraryViewModel,
+    onScanLibrary: () -> Unit,
+    isScanning: Boolean,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -96,10 +100,11 @@ fun LibraryScreen(
     var isSortMenuExpanded by remember { mutableStateOf(false) }
     var isAlbumSortMenuExpanded by remember { mutableStateOf(false) }
     var showNewPlaylistDialog by remember { mutableStateOf(false) }
-    var newPlaylistName by remember { mutableStateOf("") }
     var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
     var showAddToPlaylistSong by remember { mutableStateOf<Song?>(null) }
     var showDeletePlaylistConfirm by remember { mutableStateOf(false) }
+
+    var songToRemove by remember(selectedPlaylist?.id) { mutableStateOf<Song?>(null) }
 
     // Intercept system Back to dismiss any open sub-views (album, artist, or playlist detail)
     BackHandler(enabled = selectedPlaylist != null || selectedAlbum != null || selectedArtist != null) {
@@ -147,7 +152,6 @@ fun LibraryScreen(
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            newPlaylistName = ""
                             showNewPlaylistDialog = true
                         }
                     ) {
@@ -244,8 +248,30 @@ fun LibraryScreen(
 
         Spacer(modifier = Modifier.height(FlacifyTheme.spacing.xs))
 
-        // Content Area by Tab
-        when (selectedTab) {
+        val refresh = pagedSongs.loadState.refresh
+        if (selectedTab != LibraryTab.PLAYLISTS && pagedSongs.itemCount == 0) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(FlacifyTheme.spacing.xl),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(FlacifyTheme.spacing.sm)
+            ) {
+                when {
+                    isScanning || refresh is LoadState.Loading -> {
+                        CircularProgressIndicator(color = FlacifyTheme.colors.accent)
+                        Text(if (isScanning) "Scanning library…" else "Loading library…", color = FlacifyTheme.colors.secondaryText)
+                    }
+                    refresh is LoadState.Error -> {
+                        Text("Couldn’t load your library.", color = FlacifyTheme.colors.primaryText)
+                        TextButton(onClick = pagedSongs::retry) { Text("Try again") }
+                    }
+                    else -> {
+                        Text("No music in your library yet", style = FlacifyTheme.typography.heading2, color = FlacifyTheme.colors.primaryText)
+                        Text("Add audio files to your device, then scan for songs.", color = FlacifyTheme.colors.secondaryText)
+                        Button(onClick = onScanLibrary) { Text("Scan library") }
+                    }
+                }
+            }
+        } else when (selectedTab) {
             LibraryTab.PLAYLISTS -> {
                 if (playlists.isEmpty()) {
                     Box(
@@ -289,7 +315,6 @@ fun LibraryScreen(
                             Button(
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    newPlaylistName = ""
                                     showNewPlaylistDialog = true
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
@@ -478,6 +503,10 @@ fun LibraryScreen(
                 onSongMoreClick = { song ->
                     selectedSongForOptions = song
                 },
+                onBrowseSongs = {
+                    viewModel.selectPlaylist(null)
+                    viewModel.selectTab(LibraryTab.SONGS)
+                },
                 onDeleteClick = {
                     showDeletePlaylistConfirm = true
                 }
@@ -488,43 +517,14 @@ fun LibraryScreen(
     // Delete Playlist Confirmation Dialog
     if (showDeletePlaylistConfirm && selectedPlaylist != null) {
         val targetPlaylist = selectedPlaylist!!
-        FlacifyGlassDialog(
-            onDismissRequest = { showDeletePlaylistConfirm = false },
-            title = {
-                Text(
-                    text = "Delete Playlist",
-                    style = FlacifyTheme.typography.heading2,
-                    color = FlacifyTheme.colors.primaryText
-                )
-            },
-            text = {
-                Text(
-                    text = "Are you sure you want to delete \"${targetPlaylist.name}\"? This action cannot be undone.",
-                    style = FlacifyTheme.typography.bodyMedium,
-                    color = FlacifyTheme.colors.secondaryText
-                )
-            },
-            confirmButton = {
-                Box(
-                    modifier = Modifier
-                        .clip(FlacifyTheme.shapes.medium)
-                        .background(FlacifyTheme.colors.error)
-                        .bounceClick {
-                            viewModel.deletePlaylist(targetPlaylist.id)
-                            showDeletePlaylistConfirm = false
-                        }
-                        .padding(horizontal = FlacifyTheme.spacing.md, vertical = 10.dp)
-                ) {
-                    Text("Delete", color = androidx.compose.ui.graphics.Color.White, style = FlacifyTheme.typography.primaryButton)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDeletePlaylistConfirm = false },
-                    modifier = Modifier.bounceClick()
-                ) {
-                    Text("Cancel", color = FlacifyTheme.colors.primaryText)
-                }
+        ConfirmRemovalDialog(
+            title = "Delete playlist?",
+            message = "“${targetPlaylist.name}” will be deleted. Its songs stay in your library.",
+            action = "Delete",
+            onDismiss = { showDeletePlaylistConfirm = false },
+            onConfirm = {
+                viewModel.deletePlaylist(targetPlaylist.id)
+                showDeletePlaylistConfirm = false
             }
         )
     }
@@ -680,13 +680,12 @@ fun LibraryScreen(
 
                 // If currently viewing a playlist, show option to remove from this playlist
                 if (selectedPlaylist != null) {
-                    val currentPlaylistId = selectedPlaylist!!.id
                     ActionSheetRow(
                         icon = FlacifyIcons.Delete,
                         title = "Remove from Playlist",
                         iconTint = FlacifyTheme.colors.accent,
                         onClick = {
-                            viewModel.removeSongFromPlaylist(currentPlaylistId, song.id)
+                            songToRemove = song
                             selectedSongForOptions = null
                         }
                     )
@@ -697,168 +696,39 @@ fun LibraryScreen(
         }
     }
 
-    // Add To Playlist Sheet
-    if (showAddToPlaylistSong != null) {
-        val targetSong = showAddToPlaylistSong!!
-        ModalBottomSheet(
-            onDismissRequest = { showAddToPlaylistSong = null },
-            containerColor = FlacifyTheme.colors.surfaceElevated,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Add to Playlist",
-                        style = FlacifyTheme.typography.sectionTitle,
-                        color = FlacifyTheme.colors.primaryText
-                    )
-                    IconButton(onClick = { showAddToPlaylistSong = null }) {
-                        Icon(imageVector = FlacifyIcons.Close, contentDescription = "Close", tint = FlacifyTheme.colors.secondaryText)
-                    }
+    songToRemove?.let { song ->
+        selectedPlaylist?.let { playlist ->
+            ConfirmRemovalDialog(
+                title = "Remove song?",
+                message = "Remove “${song.title}” from “${playlist.name}”?",
+                action = "Remove",
+                onDismiss = { songToRemove = null },
+                onConfirm = {
+                    viewModel.removeSongFromPlaylist(playlist.id, song.id)
+                    songToRemove = null
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Create New Playlist action
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(FlacifyTheme.shapes.small)
-                        .clickable {
-                            showAddToPlaylistSong = null
-                            newPlaylistName = ""
-                            showNewPlaylistDialog = true
-                        }
-                        .padding(vertical = 12.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = FlacifyIcons.Add,
-                        contentDescription = null,
-                        tint = FlacifyTheme.colors.accent,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Text(
-                        text = "New Playlist...",
-                        style = FlacifyTheme.typography.primaryContentBold,
-                        color = FlacifyTheme.colors.accent
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(playlists, key = { it.id }) { playlist ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(FlacifyTheme.shapes.small)
-                                .clickable {
-                                    viewModel.addSongToPlaylist(playlist.id, targetSong.id)
-                                    showAddToPlaylistSong = null
-                                }
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(FlacifyTheme.shapes.small)
-                                    .background(FlacifyTheme.colors.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = FlacifyIcons.Queue,
-                                    contentDescription = null,
-                                    tint = FlacifyTheme.colors.accent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = playlist.name,
-                                    style = FlacifyTheme.typography.primaryContentBold,
-                                    color = FlacifyTheme.colors.primaryText
-                                )
-                                Text(
-                                    text = "${playlist.trackCount} ${if (playlist.trackCount == 1) "song" else "songs"}",
-                                    style = FlacifyTheme.typography.secondaryContent,
-                                    color = FlacifyTheme.colors.secondaryText
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            )
         }
     }
 
-    // New Playlist Dialog
-    if (showNewPlaylistDialog) {
-        FlacifyGlassDialog(
-            onDismissRequest = { showNewPlaylistDialog = false },
-            title = {
-                Text(
-                    text = "New Playlist",
-                    style = FlacifyTheme.typography.heading2,
-                    color = FlacifyTheme.colors.primaryText
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Enter a title for this playlist.",
-                        style = FlacifyTheme.typography.bodyMedium,
-                        color = FlacifyTheme.colors.secondaryText
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FlacifyGlassTextField(
-                        value = newPlaylistName,
-                        onValueChange = { newPlaylistName = it },
-                        placeholderText = "Playlist Name",
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Box(
-                    modifier = Modifier
-                        .clip(FlacifyTheme.shapes.medium)
-                        .background(if (newPlaylistName.isNotBlank()) FlacifyTheme.colors.accent else FlacifyTheme.colors.accent.copy(alpha = 0.4f))
-                        .bounceClick {
-                            if (newPlaylistName.isNotBlank()) {
-                                viewModel.createPlaylist(newPlaylistName.trim())
-                                showNewPlaylistDialog = false
-                                newPlaylistName = ""
-                            }
-                        }
-                        .padding(horizontal = FlacifyTheme.spacing.md, vertical = 10.dp)
-                ) {
-                    Text("Create", color = androidx.compose.ui.graphics.Color.White, style = FlacifyTheme.typography.primaryButton)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showNewPlaylistDialog = false },
-                    modifier = Modifier.bounceClick()
-                ) {
-                    Text("Cancel", color = FlacifyTheme.colors.primaryText)
-                }
-            }
+    showAddToPlaylistSong?.let { song ->
+        AddToPlaylistSheet(
+            song = song,
+            playlists = playlists,
+            onAdd = { viewModel.addSongToPlaylist(it, song.id) },
+            onCreate = { viewModel.createPlaylist(it, song.id) },
+            onDismiss = { showAddToPlaylistSong = null }
         )
     }
+
+    if (showNewPlaylistDialog) {
+        NewPlaylistDialog(
+            onDismiss = { showNewPlaylistDialog = false },
+            onCreate = { viewModel.createPlaylist(it) },
+            onCreated = { showNewPlaylistDialog = false }
+        )
+    }
+
 }
 
 @Composable
@@ -956,6 +826,7 @@ private fun PlaylistDetailContent(
     onShuffle: () -> Unit,
     onSongClick: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit,
+    onBrowseSongs: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     LazyColumn(
@@ -1047,12 +918,15 @@ private fun PlaylistDetailContent(
                         .padding(vertical = FlacifyTheme.spacing.xxl),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "This playlist is empty.\nAdd tracks using song options.",
-                        style = FlacifyTheme.typography.bodyMedium,
-                        color = FlacifyTheme.colors.secondaryText,
-                        textAlign = TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "This playlist is empty.\nAdd tracks using song options.",
+                            style = FlacifyTheme.typography.bodyMedium,
+                            color = FlacifyTheme.colors.secondaryText,
+                            textAlign = TextAlign.Center
+                        )
+                        TextButton(onClick = onBrowseSongs) { Text("Browse songs") }
+                    }
                 }
             }
         } else {

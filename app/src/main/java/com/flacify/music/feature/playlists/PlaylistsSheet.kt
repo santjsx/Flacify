@@ -1,5 +1,8 @@
 package com.flacify.music.feature.playlists
 
+import androidx.compose.runtime.rememberCoroutineScope
+import com.flacify.music.core.model.Song
+import com.flacify.music.core.ui.component.ConfirmRemovalDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,14 +43,9 @@ import com.flacify.music.core.data.repository.PlaybackRepository
 import com.flacify.music.core.data.repository.PlaylistRepository
 import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
-import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.model.Playlist
-import com.flacify.music.core.ui.component.FlacifyGlassDialog
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
-import com.flacify.music.core.ui.component.FlacifyGlassTextField
 import com.flacify.music.core.ui.component.SongRow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,14 +53,15 @@ import kotlinx.coroutines.launch
 fun PlaylistsSheet(
     playlistRepository: PlaylistRepository,
     playbackRepository: PlaybackRepository,
+    onBrowseSongs: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val playlists by playlistRepository.getAllPlaylists().collectAsStateWithLifecycle(initialValue = emptyList())
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showCreateDialog by remember { mutableStateOf(false) }
-    var newPlaylistName by remember { mutableStateOf("") }
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
     FlacifyGlassSheet(
@@ -106,7 +105,6 @@ fun PlaylistsSheet(
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            newPlaylistName = ""
                             showCreateDialog = true
                         }
                     ) {
@@ -207,7 +205,6 @@ fun PlaylistsSheet(
                         )
                         Button(
                             onClick = {
-                                newPlaylistName = ""
                                 showCreateDialog = true
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
@@ -223,56 +220,11 @@ fun PlaylistsSheet(
 
     // Create Playlist Dialog
     if (showCreateDialog) {
-        FlacifyGlassDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = {
-                Text(
-                    text = "New Playlist",
-                    style = FlacifyTheme.typography.heading2,
-                    color = FlacifyTheme.colors.primaryText
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Enter a title for your new playlist:",
-                        style = FlacifyTheme.typography.bodyMedium,
-                        color = FlacifyTheme.colors.secondaryText
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FlacifyGlassTextField(
-                        value = newPlaylistName,
-                        onValueChange = { newPlaylistName = it },
-                        placeholderText = "Playlist Name",
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Box(
-                    modifier = Modifier
-                        .clip(FlacifyTheme.shapes.medium)
-                        .background(FlacifyTheme.colors.accent)
-                        .bounceClick {
-                            if (newPlaylistName.isNotBlank()) {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    playlistRepository.createPlaylist(newPlaylistName)
-                                }
-                                showCreateDialog = false
-                            }
-                        }
-                        .padding(horizontal = FlacifyTheme.spacing.md, vertical = 10.dp)
-                ) {
-                    Text(text = "Create", color = androidx.compose.ui.graphics.Color.White, style = FlacifyTheme.typography.primaryButton)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showCreateDialog = false },
-                    modifier = Modifier.bounceClick()
-                ) {
-                    Text(text = "Cancel", color = FlacifyTheme.colors.primaryText)
-                }
+        NewPlaylistDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { playlistRepository.createPlaylist(it) },
+            onCreated = {
+                showCreateDialog = false
             }
         )
     }
@@ -280,6 +232,8 @@ fun PlaylistsSheet(
     // Playlist Details Sheet
     if (selectedPlaylist != null) {
         val playlist = selectedPlaylist!!
+        var confirmDelete by remember(playlist.id) { mutableStateOf(false) }
+        var songToRemove by remember(playlist.id) { mutableStateOf<Song?>(null) }
         val playlistSongs by playlistRepository.getSongsForPlaylist(playlist.id).collectAsStateWithLifecycle(initialValue = emptyList())
         val currentSong by playbackRepository.currentSong.collectAsStateWithLifecycle()
         val isPlaying by playbackRepository.isPlaying.collectAsStateWithLifecycle()
@@ -314,10 +268,7 @@ fun PlaylistsSheet(
 
                     IconButton(
                         onClick = {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                playlistRepository.deletePlaylist(playlist.id)
-                            }
-                            selectedPlaylist = null
+                            confirmDelete = true
                         }
                     ) {
                         Icon(
@@ -379,11 +330,9 @@ fun PlaylistsSheet(
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     playbackRepository.playSong(song, playlistSongs)
                                 },
-                                onMoreClick = {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        playlistRepository.removeSongFromPlaylist(playlist.id, song.id)
-                                    }
-                                }
+                                onMoreClick = { songToRemove = song },
+                                actionIcon = FlacifyIcons.Delete,
+                                actionLabel = "Remove ${song.title} from playlist"
                             )
                         }
                     }
@@ -394,14 +343,42 @@ fun PlaylistsSheet(
                             .padding(vertical = 36.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "No songs added to this playlist yet.",
-                            style = FlacifyTheme.typography.secondaryContent,
-                            color = FlacifyTheme.colors.secondaryText
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "To add songs, open a song’s options in Library and choose Add to Playlist.",
+                                style = FlacifyTheme.typography.secondaryContent,
+                                color = FlacifyTheme.colors.secondaryText
+                            )
+                            TextButton(onClick = onBrowseSongs) { Text("Browse songs") }
+                        }
                     }
                 }
             }
+        }
+        if (confirmDelete) {
+            ConfirmRemovalDialog(
+                title = "Delete playlist?",
+                message = "“${playlist.name}” will be deleted. Its songs stay in your library.",
+                action = "Delete",
+                onDismiss = { confirmDelete = false },
+                onConfirm = {
+                    confirmDelete = false
+                    scope.launch { playlistRepository.deletePlaylist(playlist.id) }
+                    selectedPlaylist = null
+                }
+            )
+        }
+        songToRemove?.let { song ->
+            ConfirmRemovalDialog(
+                title = "Remove song?",
+                message = "Remove “${song.title}” from “${playlist.name}”?",
+                action = "Remove",
+                onDismiss = { songToRemove = null },
+                onConfirm = {
+                    songToRemove = null
+                    scope.launch { playlistRepository.removeSongFromPlaylist(playlist.id, song.id) }
+                }
+            )
         }
     }
 }

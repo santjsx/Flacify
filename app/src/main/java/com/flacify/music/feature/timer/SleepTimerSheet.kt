@@ -371,6 +371,8 @@ fun SleepTimerSheet(
 
         // Custom Duration Input Dialog
         if (showCustomDurationDialog) {
+            var attempted by remember { mutableStateOf(false) }
+            val minutes = customMinutesInput.toIntOrNull()?.takeIf { it > 0 }
             FlacifyGlassDialog(
                 onDismissRequest = { showCustomDurationDialog = false },
                 title = {
@@ -390,7 +392,8 @@ fun SleepTimerSheet(
                         Spacer(modifier = Modifier.height(12.dp))
                         FlacifyGlassTextField(
                             value = customMinutesInput,
-                            onValueChange = { customMinutesInput = it.filter { ch -> ch.isDigit() } },
+                            onValueChange = { customMinutesInput = it },
+                            errorMessage = if (attempted && minutes == null) "Enter a positive whole number of minutes." else null,
                             placeholderText = "e.g. 25",
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -403,9 +406,9 @@ fun SleepTimerSheet(
                             .clip(FlacifyTheme.shapes.medium)
                             .background(FlacifyTheme.colors.accent)
                             .bounceClick {
-                                val mins = customMinutesInput.toIntOrNull()
-                                if (mins != null && mins > 0) {
-                                    timerManager.startTimer(mins)
+                                attempted = true
+                                if (minutes != null) {
+                                    timerManager.startTimer(minutes)
                                     showCustomDurationDialog = false
                                 }
                             }

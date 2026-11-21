@@ -52,7 +52,7 @@ class NowPlayingViewModel @Inject constructor(
     // Reactive single source of truth for favorite status of current track
     val isFavorite: StateFlow<Boolean> = playbackRepository.currentSong
         .flatMapLatest { song ->
-            if (song != null) {
+            if (song != null && !song.isTelegram) {
                 songRepository.isFavoriteFlow(song.id)
             } else {
                 flowOf(false)
@@ -64,7 +64,9 @@ class NowPlayingViewModel @Inject constructor(
 
     val lyricsUiState: StateFlow<LyricsUiState> = combine(currentSong, lyricsRefreshTrigger) { song, _ -> song }
         .flatMapLatest { song ->
-            if (song != null) {
+            if (song?.isTelegram == true) {
+                flowOf(LyricsUiState.Empty("Lyrics are unavailable for this Telegram track."))
+            } else if (song != null) {
                 lyricsRepository.getLyrics(song).map { result ->
                     when (result) {
                         is LyricsResult.Loading -> LyricsUiState.Loading

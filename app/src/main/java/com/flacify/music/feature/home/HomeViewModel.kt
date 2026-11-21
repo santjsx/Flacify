@@ -59,8 +59,9 @@ class HomeViewModel @Inject constructor(
     val scanStatus: StateFlow<ScanStatus> = _scanStatus.asStateFlow()
 
     fun scanLibrary() {
+        if (_scanStatus.value is ScanStatus.Scanning) return
+        _scanStatus.value = ScanStatus.Scanning(0, 0)
         viewModelScope.launch {
-            _scanStatus.value = ScanStatus.Scanning(0, 0)
             val result = songRepository.scanLibrary()
             _scanStatus.value = result
         }
@@ -104,21 +105,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun addSongToPlaylist(playlistId: Long, songId: Long) {
-        viewModelScope.launch {
-            playlistRepository.addSongToPlaylist(playlistId, songId)
-        }
+    suspend fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        playlistRepository.addSongToPlaylist(playlistId, songId)
     }
 
-    fun createPlaylist(name: String, songIdToAdd: Long? = null) {
+    suspend fun createPlaylist(name: String, songIdToAdd: Long? = null) {
         val trimmed = name.trim()
-        if (trimmed.isEmpty()) return
-        viewModelScope.launch {
-            val playlistId = playlistRepository.createPlaylist(trimmed)
-            if (songIdToAdd != null) {
-                playlistRepository.addSongToPlaylist(playlistId, songIdToAdd)
-            }
-        }
+        if (trimmed.isNotEmpty()) playlistRepository.createPlaylist(trimmed, songIdToAdd)
     }
 }
 

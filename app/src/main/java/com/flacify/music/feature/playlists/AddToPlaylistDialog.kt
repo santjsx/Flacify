@@ -1,5 +1,9 @@
 package com.flacify.music.feature.playlists
 
+import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.CancellationException
+import androidx.compose.runtime.rememberCoroutineScope
+import com.flacify.music.core.model.Playlist
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -20,7 +24,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,11 +42,7 @@ import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.model.Song
-import com.flacify.music.core.ui.component.FlacifyGlassDialog
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
-import com.flacify.music.core.ui.component.FlacifyGlassTextField
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,11 +52,30 @@ fun AddToPlaylistSheet(
     playlistRepository: PlaylistRepository,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
     val playlists by playlistRepository.getAllPlaylists().collectAsStateWithLifecycle(initialValue = emptyList())
+    AddToPlaylistSheet(
+        song = song,
+        playlists = playlists,
+        onAdd = { playlistRepository.addSongToPlaylist(it, song.id) },
+        onCreate = { playlistRepository.createPlaylist(it, song.id) },
+        onDismiss = onDismiss
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddToPlaylistSheet(
+    song: Song,
+    playlists: List<Playlist>,
+    onAdd: suspend (Long) -> Unit,
+    onCreate: suspend (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var savingId by remember { mutableStateOf<Long?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showCreateDialog by remember { mutableStateOf(false) }
-    var newPlaylistName by remember { mutableStateOf("") }
 
     FlacifyGlassSheet(
         onDismissRequest = onDismiss,
@@ -73,7 +91,7 @@ fun AddToPlaylistSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -89,11 +107,20 @@ fun AddToPlaylistSheet(
                         )
                     }
                     Spacer(modifier = Modifier.width(FlacifyTheme.spacing.sm))
-                    Text(
-                        text = "Add to Playlist",
-                        style = FlacifyTheme.typography.heading2,
-                        color = FlacifyTheme.colors.primaryText
-                    )
+                    Column {
+                        Text(
+                            text = "Add to Playlist",
+                            style = FlacifyTheme.typography.heading2,
+                            color = FlacifyTheme.colors.primaryText
+                        )
+                        Text(
+                            song.title,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = FlacifyTheme.typography.albumMetadata,
+                            color = FlacifyTheme.colors.secondaryText
+                        )
+                    }
                 }
 
                 IconButton(
@@ -121,8 +148,7 @@ fun AddToPlaylistSheet(
                         BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f)),
                         shape = FlacifyTheme.shapes.medium
                     )
-                    .bounceClick {
-                        newPlaylistName = ""
+                    .bounceClick(enabled = savingId == null) {
                         showCreateDialog = true
                     }
                     .padding(vertical = 12.dp, horizontal = 14.dp),
@@ -158,12 +184,23 @@ fun AddToPlaylistSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(FlacifyTheme.shapes.medium)
-                            .bounceClick {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    playlistRepository.addSongToPlaylist(playlist.id, song.id)
+                            .bounceClick(enabled = savingId == null) {
+                                if (savingId == null) {
+                                    savingId = playlist.id
+                                    scope.launch {
+                                        try {
+                                            onAdd(playlist.id)
+                                            Toast.makeText(context, "Added to ${playlist.name}", Toast.LENGTH_SHORT).show()
+                                            onDismiss()
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Couldn’t add song. Try again.", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            savingId = null
+                                        }
+                                    }
                                 }
-                                Toast.makeText(context, "Added to ${playlist.name}", Toast.LENGTH_SHORT).show()
-                                onDismiss()
                             }
                             .padding(vertical = 12.dp, horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -184,7 +221,7 @@ fun AddToPlaylistSheet(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Text(
-                            text = playlist.name,
+                            text = if (savingId == playlist.id) "Adding song…" else playlist.name,
                             style = FlacifyTheme.typography.bodyLarge,
                             color = FlacifyTheme.colors.primaryText
                         )
@@ -194,64 +231,14 @@ fun AddToPlaylistSheet(
         }
 
         if (showCreateDialog) {
-            FlacifyGlassDialog(
-                onDismissRequest = { showCreateDialog = false },
-                title = {
-                    Text(
-                        text = "New Playlist",
-                        style = FlacifyTheme.typography.heading2,
-                        color = FlacifyTheme.colors.primaryText
-                    )
+            NewPlaylistDialog(
+                onDismiss = { showCreateDialog = false },
+                onCreate = onCreate,
+                onCreated = {
+                    showCreateDialog = false
+                    onDismiss()
                 },
-                text = {
-                    Column {
-                        Text(
-                            text = "Enter a title for your new playlist:",
-                            style = FlacifyTheme.typography.bodyMedium,
-                            color = FlacifyTheme.colors.secondaryText
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        FlacifyGlassTextField(
-                            value = newPlaylistName,
-                            onValueChange = { newPlaylistName = it },
-                            placeholderText = "Playlist Name",
-                            singleLine = true
-                        )
-                    }
-                },
-                confirmButton = {
-                    Box(
-                        modifier = Modifier
-                            .clip(FlacifyTheme.shapes.medium)
-                            .background(FlacifyTheme.colors.accent)
-                            .bounceClick {
-                                if (newPlaylistName.isNotBlank()) {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        val id = playlistRepository.createPlaylist(newPlaylistName)
-                                        playlistRepository.addSongToPlaylist(id, song.id)
-                                    }
-                                    Toast.makeText(context, "Created & added to $newPlaylistName", Toast.LENGTH_SHORT).show()
-                                    showCreateDialog = false
-                                    onDismiss()
-                                }
-                            }
-                            .padding(horizontal = FlacifyTheme.spacing.md, vertical = 10.dp)
-                    ) {
-                        Text(
-                            text = "Create & Add",
-                            color = Color.White,
-                            style = FlacifyTheme.typography.primaryButton
-                        )
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showCreateDialog = false },
-                        modifier = Modifier.bounceClick()
-                    ) {
-                        Text(text = "Cancel", color = FlacifyTheme.colors.primaryText)
-                    }
-                }
+                addSong = true
             )
         }
     }

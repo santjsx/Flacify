@@ -157,12 +157,9 @@ class LibraryViewModel @Inject constructor(
         _selectedPlaylist.value = playlist
     }
 
-    fun createPlaylist(name: String) {
+    suspend fun createPlaylist(name: String, songIdToAdd: Long? = null) {
         val trimmed = name.trim()
-        if (trimmed.isEmpty()) return
-        viewModelScope.launch {
-            playlistRepository.createPlaylist(trimmed)
-        }
+        if (trimmed.isNotEmpty()) playlistRepository.createPlaylist(trimmed, songIdToAdd)
     }
 
     fun deletePlaylist(playlistId: Long) {
@@ -180,10 +177,8 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun addSongToPlaylist(playlistId: Long, songId: Long) {
-        viewModelScope.launch {
-            playlistRepository.addSongToPlaylist(playlistId, songId)
-        }
+    suspend fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        playlistRepository.addSongToPlaylist(playlistId, songId)
     }
 
     fun playSong(song: Song, songs: List<Song> = emptyList()) {

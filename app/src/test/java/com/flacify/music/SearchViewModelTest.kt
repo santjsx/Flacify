@@ -1,5 +1,12 @@
 package com.flacify.music
 
+import io.mockk.coVerify
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import com.flacify.music.core.data.repository.PlaybackRepository
 import com.flacify.music.core.data.repository.SongRepository
 import com.flacify.music.core.model.Song
@@ -50,5 +57,25 @@ class SearchViewModelTest {
         viewModel.clearQuery()
         assertEquals("", viewModel.searchQuery.value)
     }
+    @Test
+    fun changingQueryDuringDebouncePublishesOnlyTheLatestResult() = runTest(testDispatcher) {
+        coEvery { songRepository.searchSongs(any()) } returns emptyList()
+        val viewModel = SearchViewModel(songRepository, playbackRepository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.searchResults.collect() }
+        viewModel.updateQuery("Radio")
+        advanceTimeBy(200)
+        viewModel.updateQuery("Head")
+        advanceTimeBy(299)
+        coVerify(exactly = 0) { songRepository.searchSongs(any()) }
+        advanceTimeBy(1)
+        runCurrent()
+
+        assertEquals("Head", viewModel.searchResults.value.query)
+        coVerify(exactly = 1) { songRepository.searchSongs("Head") }
+        viewModel.clearQuery()
+        runCurrent()
+        assertEquals("", viewModel.searchResults.value.query)
+    }
+
 }
 

@@ -1,7 +1,12 @@
 package com.flacify.music.feature.more
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.flacify.music.feature.telegram.TelegramViewModel
+import com.flacify.music.feature.telegram.TelegramSheet
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import com.flacify.music.BuildConfig
-import androidx.activity.compose.BackHandler
 import com.flacify.music.core.model.HapticMode
 import android.content.Intent
 import android.net.Uri
@@ -53,6 +58,7 @@ import com.flacify.music.core.ui.component.SmoothHandoffLoader
 fun MoreScreen(
     viewModel: MoreViewModel,
     onRescanClick: () -> Unit,
+    isScanning: Boolean,
     onEqualizerClick: () -> Unit = {},
     onSleepTimerClick: () -> Unit = {},
     onMusicHapticsClick: () -> Unit = {},
@@ -63,6 +69,8 @@ fun MoreScreen(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    var clearingArtwork by remember { mutableStateOf(false) }
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val minDuration by viewModel.minTrackDurationSec.collectAsStateWithLifecycle()
     val songCount by viewModel.songCount.collectAsStateWithLifecycle()
@@ -71,6 +79,11 @@ fun MoreScreen(
     val updateState by viewModel.updateUiState.collectAsStateWithLifecycle()
     val musicHapticsMode by viewModel.musicHapticsMode.collectAsStateWithLifecycle()
     val bottomClearance = rememberFloatingDockBottomClearance(hasActiveTrack = hasActiveTrack)
+
+    var telegramOpen by remember { mutableStateOf(false) }
+    val telegram: TelegramViewModel = hiltViewModel()
+    val telegramAuth by telegram.auth.collectAsStateWithLifecycle()
+    if (telegramOpen) TelegramSheet(onDismiss = { telegramOpen = false }, vm = telegram)
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showStorageDialog by remember { mutableStateOf(false) }
@@ -92,18 +105,19 @@ fun MoreScreen(
         ) {
             Column {
                 Text(
-                    text = "Settings",
+                    text = "Profile",
                     style = FlacifyTheme.typography.appScreenTitle,
                     color = FlacifyTheme.colors.primaryText
                 )
                 Text(
-                    text = "Settings & preferences",
+                    text = "Collections and settings",
                     style = FlacifyTheme.typography.albumMetadata,
                     color = FlacifyTheme.colors.secondaryText
                 )
             }
 
             IconButton(
+                enabled = !isScanning,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onRescanClick()
@@ -210,13 +224,27 @@ fun MoreScreen(
             }
         }
 
+        item {
+            Spacer(Modifier.height(FlacifyTheme.spacing.md))
+            PreferenceGroup(title = "TELEGRAM INTEGRATION") {
+                PreferenceRow(
+                    icon = FlacifyIcons.MusicNote,
+                    title = "Telegram music",
+                    subtitle = (telegramAuth as? com.flacify.music.core.telegram.TelegramAuthState.Ready)?.displayName
+                        ?: "Connect or manage your Telegram channels",
+                    onClick = { telegramOpen = true }
+                )
+            }
+        }
+
         // Section 4: Library & Storage (PRD Section 12)
         item {
             Spacer(modifier = Modifier.height(FlacifyTheme.spacing.md))
             PreferenceGroup(title = "LIBRARY & STORAGE") {
                 PreferenceRow(
                     icon = FlacifyIcons.Refresh,
-                    title = "Rescan Media Library",
+                    title = if (isScanning) "Scanning library…" else "Rescan Media Library",
+                    enabled = !isScanning,
                     subtitle = "Detect newly added or modified tracks",
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -234,12 +262,25 @@ fun MoreScreen(
                 )
                 PreferenceRow(
                     icon = FlacifyIcons.Clean,
-                    title = "Clear Artwork Cache",
+                    enabled = !clearingArtwork,
+                    title = if (clearingArtwork) "Clearing artwork cache…" else "Clear Artwork Cache",
                     subtitle = "Free image cache without deleting audio files",
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.clearArtworkCache(context)
-                        Toast.makeText(context, "Artwork cache cleared", Toast.LENGTH_SHORT).show()
+                        clearingArtwork = true
+                        scope.launch {
+                            val message = try {
+                                viewModel.clearArtworkCache(context)
+                                "Artwork cache cleared"
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                "Couldn’t clear artwork cache. Try again."
+                            } finally {
+                                clearingArtwork = false
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 )
             }
@@ -270,7 +311,7 @@ fun MoreScreen(
                 PreferenceRow(
                     icon = FlacifyIcons.Shield,
                     title = "Privacy Policy",
-                    subtitle = "100% offline-first · Zero telemetry",
+                    subtitle = "Local library and connected services",
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showPrivacyDialog = true
@@ -414,12 +455,12 @@ fun MoreScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "100% Offline-First Architecture",
+                        text = "Local music and Telegram",
                         color = FlacifyTheme.colors.primaryText,
                         style = FlacifyTheme.typography.primaryContentBold
                     )
                     Text(
-                        text = "FLACify operates strictly locally on your device. We do not operate remote databases, servers, or cloud endpoints.",
+                        text = "Your device plays local music offline. Connecting Telegram lets this device authenticate, read channel messages, and download audio directly from Telegram.",
                         color = FlacifyTheme.colors.secondaryText,
                         style = FlacifyTheme.typography.bodyMedium
                     )
@@ -430,7 +471,7 @@ fun MoreScreen(
                         style = FlacifyTheme.typography.primaryContentBold
                     )
                     Text(
-                        text = "Your music library, playlists, listening frequency, favorites, and settings remain 100% private and never leave your phone.",
+                        text = "FLACify stores the Telegram session, channel index, and downloaded media in app-private storage. You can clear downloaded media or disconnect in Telegram music.",
                         color = FlacifyTheme.colors.secondaryText,
                         style = FlacifyTheme.typography.bodyMedium
                     )
@@ -708,12 +749,13 @@ private fun PreferenceRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = FlacifyTheme.spacing.md, vertical = FlacifyTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -1,5 +1,6 @@
 package com.flacify.music.feature.home
 
+import com.flacify.music.feature.playlists.AddToPlaylistSheet
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -30,12 +31,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,9 +55,7 @@ import com.flacify.music.core.designsystem.icon.FlacifyIcons
 import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.model.Song
-import com.flacify.music.core.ui.component.FlacifyGlassDialog
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
-import com.flacify.music.core.ui.component.FlacifyGlassTextField
 import com.flacify.music.core.ui.component.SmoothHandoffLoader
 import com.flacify.music.core.ui.component.SongRow
 import com.flacify.music.core.ui.component.rememberFloatingDockBottomClearance
@@ -92,30 +87,12 @@ fun HomeScreen(
 
     var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
     var showAddToPlaylistSong by remember { mutableStateOf<Song?>(null) }
-    var showNewPlaylistDialog by remember { mutableStateOf(false) }
-    var newPlaylistName by remember { mutableStateOf("") }
 
     // Intercept back button when any sheet or dialog is open
-    BackHandler(enabled = selectedSongForOptions != null || showAddToPlaylistSong != null || showNewPlaylistDialog) {
+    BackHandler(enabled = selectedSongForOptions != null || showAddToPlaylistSong != null) {
         when {
-            showNewPlaylistDialog -> showNewPlaylistDialog = false
             showAddToPlaylistSong != null -> showAddToPlaylistSong = null
             selectedSongForOptions != null -> selectedSongForOptions = null
-        }
-    }
-
-    // Scan feedback toast (PRD Section 15.1)
-    LaunchedEffect(scanStatus) {
-        when (val status = scanStatus) {
-            is ScanStatus.Completed -> {
-                val msg = if (status.addedCount > 0) {
-                    "Music library updated · ${status.addedCount} new tracks"
-                } else {
-                    "Your music library is up to date."
-                }
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            }
-            else -> {}
         }
     }
 
@@ -436,170 +413,16 @@ fun HomeScreen(
         }
     }
 
-    // Add To Playlist Sheet
-    if (showAddToPlaylistSong != null) {
-        val targetSong = showAddToPlaylistSong!!
-        ModalBottomSheet(
-            onDismissRequest = { showAddToPlaylistSong = null },
-            containerColor = FlacifyTheme.colors.surfaceElevated,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Add to Playlist",
-                        style = FlacifyTheme.typography.sectionTitle,
-                        color = FlacifyTheme.colors.primaryText
-                    )
-                    IconButton(onClick = { showAddToPlaylistSong = null }) {
-                        Icon(imageVector = FlacifyIcons.Close, contentDescription = "Close", tint = FlacifyTheme.colors.secondaryText)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Create New Playlist action
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(FlacifyTheme.shapes.small)
-                        .clickable {
-                            newPlaylistName = ""
-                            showNewPlaylistDialog = true
-                        }
-                        .padding(vertical = 12.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = FlacifyIcons.Add,
-                        contentDescription = null,
-                        tint = FlacifyTheme.colors.accent,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Text(
-                        text = "New Playlist...",
-                        style = FlacifyTheme.typography.primaryContentBold,
-                        color = FlacifyTheme.colors.accent
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(playlists, key = { it.id }) { playlist ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(FlacifyTheme.shapes.small)
-                                .clickable {
-                                    viewModel.addSongToPlaylist(playlist.id, targetSong.id)
-                                    Toast.makeText(context, "Added to ${playlist.name}", Toast.LENGTH_SHORT).show()
-                                    showAddToPlaylistSong = null
-                                }
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(FlacifyTheme.shapes.small)
-                                    .background(FlacifyTheme.colors.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = FlacifyIcons.Queue,
-                                    contentDescription = null,
-                                    tint = FlacifyTheme.colors.accent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = playlist.name,
-                                    style = FlacifyTheme.typography.primaryContentBold,
-                                    color = FlacifyTheme.colors.primaryText
-                                )
-                                Text(
-                                    text = "${playlist.trackCount} ${if (playlist.trackCount == 1) "song" else "songs"}",
-                                    style = FlacifyTheme.typography.secondaryContent,
-                                    color = FlacifyTheme.colors.secondaryText
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-    }
-
-    // New Playlist Dialog
-    if (showNewPlaylistDialog) {
-        FlacifyGlassDialog(
-            onDismissRequest = { showNewPlaylistDialog = false },
-            title = {
-                Text(
-                    text = "New Playlist",
-                    style = FlacifyTheme.typography.heading2,
-                    color = FlacifyTheme.colors.primaryText
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Enter a title for this playlist.",
-                        style = FlacifyTheme.typography.bodyMedium,
-                        color = FlacifyTheme.colors.secondaryText
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FlacifyGlassTextField(
-                        value = newPlaylistName,
-                        onValueChange = { newPlaylistName = it },
-                        placeholderText = "Playlist Name",
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Box(
-                    modifier = Modifier
-                        .clip(FlacifyTheme.shapes.medium)
-                        .background(if (newPlaylistName.isNotBlank()) FlacifyTheme.colors.accent else FlacifyTheme.colors.accent.copy(alpha = 0.4f))
-                        .bounceClick {
-                            if (newPlaylistName.isNotBlank()) {
-                                viewModel.createPlaylist(newPlaylistName.trim(), showAddToPlaylistSong?.id)
-                                Toast.makeText(context, "Created playlist \"${newPlaylistName.trim()}\"", Toast.LENGTH_SHORT).show()
-                                showAddToPlaylistSong = null
-                                showNewPlaylistDialog = false
-                                newPlaylistName = ""
-                            }
-                        }
-                        .padding(horizontal = FlacifyTheme.spacing.md, vertical = 10.dp)
-                ) {
-                    Text("Create", color = Color.White, style = FlacifyTheme.typography.primaryButton)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showNewPlaylistDialog = false },
-                    modifier = Modifier.bounceClick()
-                ) {
-                    Text("Cancel", color = FlacifyTheme.colors.primaryText)
-                }
-            }
+    showAddToPlaylistSong?.let { song ->
+        AddToPlaylistSheet(
+            song = song,
+            playlists = playlists,
+            onAdd = { viewModel.addSongToPlaylist(it, song.id) },
+            onCreate = { viewModel.createPlaylist(it, song.id) },
+            onDismiss = { showAddToPlaylistSong = null }
         )
     }
+
 }
 
 @Composable

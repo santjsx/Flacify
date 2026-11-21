@@ -123,14 +123,13 @@ class HomeViewModelTest {
 
     @Test
     fun createPlaylist_createsAndAddsSong() = runTest(testDispatcher) {
-        coEvery { playlistRepository.createPlaylist("Chill Vibes") } returns 99L
+        coEvery { playlistRepository.createPlaylist("Chill Vibes", 42L) } returns 99L
 
         val viewModel = HomeViewModel(songRepository, playbackRepository, playlistRepository)
         viewModel.createPlaylist("Chill Vibes", songIdToAdd = 42L)
         advanceUntilIdle()
 
-        coVerify { playlistRepository.createPlaylist("Chill Vibes") }
-        coVerify { playlistRepository.addSongToPlaylist(99L, 42L) }
+        coVerify { playlistRepository.createPlaylist("Chill Vibes", 42L) }
     }
 }
 

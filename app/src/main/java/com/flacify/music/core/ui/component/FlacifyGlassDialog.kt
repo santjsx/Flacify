@@ -1,5 +1,9 @@
 package com.flacify.music.core.ui.component
 
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -104,4 +108,25 @@ fun FlacifyGlassDialog(
             }
         }
     }
+}
+
+@Composable
+fun ConfirmRemovalDialog(
+    title: String,
+    message: String,
+    action: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    FlacifyGlassDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, style = FlacifyTheme.typography.heading2, color = FlacifyTheme.colors.primaryText) },
+        text = { Text(message, color = FlacifyTheme.colors.secondaryText) },
+        confirmButton = {
+            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.error)) {
+                Text(action)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }

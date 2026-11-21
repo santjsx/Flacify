@@ -1,5 +1,10 @@
 package com.flacify.music.core.audio.service
 
+import com.flacify.music.core.telegram.TelegramStreamingDataSource
+import com.flacify.music.core.telegram.MusicDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DataSource
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -32,6 +37,8 @@ class FlacifyPlaybackService : MediaSessionService() {
     @Inject
     lateinit var musicHapticsManager: MusicHapticsManager
 
+    @Inject lateinit var telegramSource: dagger.Lazy<TelegramStreamingDataSource.Factory>
+
     private var mediaSession: MediaSession? = null
     private var exoPlayer: ExoPlayer? = null
     private var becomingNoisyReceiver: BecomingNoisyReceiver? = null
@@ -62,7 +69,10 @@ class FlacifyPlaybackService : MediaSessionService() {
             }
         }
 
+        val defaults = DefaultDataSource.Factory(this)
+        val sources = DataSource.Factory { MusicDataSource(defaults.createDataSource()) { telegramSource.get().createDataSource() } }
         val player = ExoPlayer.Builder(this, renderersFactory)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(sources))
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)

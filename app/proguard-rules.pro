@@ -36,3 +36,4 @@
 }
 
 
+-keep class org.drinkless.tdlib.** { *; }

@@ -23,11 +23,16 @@ fun FlacifyGlassTextField(
     placeholderText: String = "",
     singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    errorMessage: String? = null,
+    enabled: Boolean = true
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
+        isError = errorMessage != null,
+        supportingText = errorMessage?.let { { Text(it) } },
+        enabled = enabled,
         placeholder = {
             Text(
                 text = placeholderText,

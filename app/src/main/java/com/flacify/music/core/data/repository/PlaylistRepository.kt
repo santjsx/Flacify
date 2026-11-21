@@ -12,7 +12,7 @@ import javax.inject.Singleton
 
 interface PlaylistRepository {
     fun getAllPlaylists(): Flow<List<Playlist>>
-    suspend fun createPlaylist(name: String): Long
+    suspend fun createPlaylist(name: String, firstSongId: Long? = null): Long
     suspend fun renamePlaylist(playlistId: Long, newName: String)
     suspend fun deletePlaylist(playlistId: Long)
     fun getSongsForPlaylist(playlistId: Long): Flow<List<Song>>
@@ -39,14 +39,14 @@ class PlaylistRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun createPlaylist(name: String): Long {
+    override suspend fun createPlaylist(name: String, firstSongId: Long?): Long {
         val now = System.currentTimeMillis()
         val entity = PlaylistEntity(
             name = name.trim(),
             createdAt = now,
             updatedAt = now
         )
-        return playlistDao.insertPlaylist(entity)
+        return playlistDao.insertPlaylistWithSong(entity, firstSongId)
     }
 
     override suspend fun renamePlaylist(playlistId: Long, newName: String) {

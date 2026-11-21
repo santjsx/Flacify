@@ -1,5 +1,14 @@
 package com.flacify.music.feature.more
 
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,6 +69,7 @@ fun MusicHapticsSheet(
     val haptic = LocalHapticFeedback.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scrollState = rememberScrollState()
+    var showSyncControls by rememberSaveable { mutableStateOf(false) }
 
     FlacifyGlassSheet(
         onDismissRequest = onDismiss,
@@ -229,92 +239,90 @@ fun MusicHapticsSheet(
 
             Spacer(modifier = Modifier.height(FlacifyTheme.spacing.lg))
 
-            // SECTION 3: Beat Synchronization & Micro-Tuning
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "BEAT SYNCHRONIZATION",
-                    style = FlacifyTheme.typography.caption,
-                    color = FlacifyTheme.colors.secondaryText,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.2.sp
-                )
-
-                Text(
-                    text = if (currentSyncOffsetMs == 0) "0 ms (Exact)" else "${if (currentSyncOffsetMs > 0) "+" else ""}$currentSyncOffsetMs ms",
-                    style = FlacifyTheme.typography.caption,
-                    color = FlacifyTheme.colors.accent,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(FlacifyTheme.spacing.sm))
-
-            // Route Detection Badge
-            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(FlacifyTheme.shapes.small)
-                    .background(FlacifyTheme.colors.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(horizontal = FlacifyTheme.spacing.md, vertical = FlacifyTheme.spacing.sm),
-                contentAlignment = Alignment.CenterStart
+                    .clickable(role = Role.Button) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showSyncControls = !showSyncControls
+                    }
+                    .semantics { stateDescription = if (showSyncControls) "Expanded" else "Collapsed" }
+                    .heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = FlacifyIcons.AudioWaveform,
-                        contentDescription = null,
-                        tint = FlacifyTheme.colors.accent,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(FlacifyTheme.spacing.xs))
-                    Column {
-                        Text(
-                            text = currentAudioRouteName,
-                            style = FlacifyTheme.typography.caption,
-                            color = FlacifyTheme.colors.primaryText,
-                            fontWeight = FontWeight.SemiBold
+                Text("Advanced timing", modifier = Modifier.weight(1f), color = FlacifyTheme.colors.primaryText)
+                Icon(
+                    FlacifyIcons.ChevronDown, contentDescription = null,
+                    tint = FlacifyTheme.colors.secondaryText,
+                    modifier = Modifier.rotate(if (showSyncControls) 180f else 0f)
+                )
+            }
+
+            if (showSyncControls) {
+                Text("Beat offset · ${currentSyncOffsetMs} ms", color = FlacifyTheme.colors.secondaryText)
+                // Route Detection Badge
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(FlacifyTheme.shapes.small)
+                        .background(FlacifyTheme.colors.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(horizontal = FlacifyTheme.spacing.md, vertical = FlacifyTheme.spacing.sm),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = FlacifyIcons.AudioWaveform,
+                            contentDescription = null,
+                            tint = FlacifyTheme.colors.accent,
+                            modifier = Modifier.size(16.dp)
                         )
-                        Text(
-                            text = "Automatic hardware presentation delay compensation active (<5ms phase error)",
-                            style = FlacifyTheme.typography.caption,
-                            color = FlacifyTheme.colors.tertiaryText,
-                            fontSize = 11.sp
-                        )
+                        Spacer(modifier = Modifier.width(FlacifyTheme.spacing.xs))
+                        Column {
+                            Text(
+                                text = currentAudioRouteName,
+                                style = FlacifyTheme.typography.caption,
+                                color = FlacifyTheme.colors.primaryText,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Timing adjusts automatically for this audio output.",
+                                style = FlacifyTheme.typography.caption,
+                                color = FlacifyTheme.colors.tertiaryText,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(FlacifyTheme.spacing.sm))
+                Spacer(modifier = Modifier.height(FlacifyTheme.spacing.sm))
 
-            // Micro-Tuner Slider (-60ms to +120ms)
-            Slider(
-                value = currentSyncOffsetMs.toFloat(),
-                onValueChange = { newValue ->
-                    onSyncOffsetChanged(newValue.roundToInt())
-                },
-                valueRange = -60f..120f,
-                steps = 35, // 5ms increments
-                enabled = currentMode != HapticMode.OFF,
-                colors = SliderDefaults.colors(
-                    thumbColor = FlacifyTheme.colors.accent,
-                    activeTrackColor = FlacifyTheme.colors.accent,
-                    inactiveTrackColor = FlacifyTheme.colors.surfaceVariant
+                // Micro-Tuner Slider (-60ms to +120ms)
+                Slider(
+                    value = currentSyncOffsetMs.toFloat(),
+                    onValueChange = { newValue ->
+                        onSyncOffsetChanged(newValue.roundToInt())
+                    },
+                    valueRange = -60f..120f,
+                    steps = 35, // 5ms increments
+                    enabled = currentMode != HapticMode.OFF,
+                    colors = SliderDefaults.colors(
+                        thumbColor = FlacifyTheme.colors.accent,
+                        activeTrackColor = FlacifyTheme.colors.accent,
+                        inactiveTrackColor = FlacifyTheme.colors.surfaceVariant
+                    )
                 )
-            )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("-60 ms (Earlier)", style = FlacifyTheme.typography.caption, color = FlacifyTheme.colors.tertiaryText, fontSize = 11.sp)
-                Text("Default", style = FlacifyTheme.typography.caption, color = FlacifyTheme.colors.tertiaryText, fontSize = 11.sp)
-                Text("+120 ms (Later)", style = FlacifyTheme.typography.caption, color = FlacifyTheme.colors.tertiaryText, fontSize = 11.sp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("-60 ms (Earlier)", style = FlacifyTheme.typography.caption, color = FlacifyTheme.colors.tertiaryText, fontSize = 11.sp)
+                    Text("Default", style = FlacifyTheme.typography.caption, color = FlacifyTheme.colors.tertiaryText, fontSize = 11.sp)
+                    Text("+120 ms (Later)", style = FlacifyTheme.typography.caption, color = FlacifyTheme.colors.tertiaryText, fontSize = 11.sp)
+                }
+
+                Spacer(modifier = Modifier.height(FlacifyTheme.spacing.md))
             }
-
-            Spacer(modifier = Modifier.height(FlacifyTheme.spacing.md))
 
             // Test Beat Button
             Box(

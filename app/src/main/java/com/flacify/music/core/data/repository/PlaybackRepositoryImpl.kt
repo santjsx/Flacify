@@ -1,5 +1,6 @@
 package com.flacify.music.core.data.repository
 
+import androidx.media3.common.PlaybackException
 import android.content.ComponentName
 import android.content.Context
 import androidx.core.net.toUri
@@ -112,7 +113,12 @@ class PlaybackRepositoryImpl @Inject constructor(
                 _currentPositionMs.value = controller.currentPosition.coerceAtLeast(0L)
             }
 
+            override fun onPlayerError(error: PlaybackException) {
+                _playbackState.value = PlaybackState.Error(error.errorCodeName, error)
+            }
+
             override fun onPlaybackStateChanged(state: Int) {
+                if (controller.playerError != null && state == Player.STATE_IDLE) return
                 _playbackState.value = when (state) {
                     Player.STATE_IDLE -> PlaybackState.Idle
                     Player.STATE_BUFFERING -> PlaybackState.Buffering
@@ -314,7 +320,7 @@ class PlaybackRepositoryImpl @Inject constructor(
             .setTitle(title)
             .setArtist(artistName)
             .setAlbumTitle(albumTitle)
-            .setArtworkUri("content://media/external/audio/albumart/$albumId".toUri())
+            .setArtworkUri(artworkUri.takeIf { it.isNotBlank() }?.toUri())
             .build()
 
         return MediaItem.Builder()

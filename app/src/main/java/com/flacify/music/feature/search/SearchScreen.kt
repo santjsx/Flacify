@@ -1,8 +1,15 @@
 package com.flacify.music.feature.search
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +58,11 @@ fun SearchScreen(
 ) {
     val haptic = LocalHapticFeedback.current
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val results by viewModel.searchResults.collectAsStateWithLifecycle()
+    val page by viewModel.searchResults.collectAsStateWithLifecycle()
+    val isSearching = query.isNotBlank() && page.query != query.trim()
+    val results = if (query.isBlank() || isSearching) emptyList() else page.songs
+    val focus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
     val currentSong by viewModel.currentPlayingSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val bottomClearance = rememberFloatingDockBottomClearance(hasActiveTrack = currentSong != null)
@@ -97,7 +108,7 @@ fun SearchScreen(
                     color = FlacifyTheme.colors.primaryText
                 )
                 Text(
-                    text = if (query.isNotBlank()) "${filteredResults.size} Results" else "Find tracks, albums, artists",
+                    text = if (isSearching) "Searching…" else if (query.isBlank()) "Find songs, albums, or artists" else "${filteredResults.size} results",
                     style = FlacifyTheme.typography.albumMetadata,
                     color = FlacifyTheme.colors.secondaryText
                 )
@@ -149,6 +160,7 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = FlacifyTheme.spacing.lg)
+                .focusRequester(focus)
                 .clip(FlacifyTheme.shapes.medium)
         )
 
@@ -166,10 +178,11 @@ fun SearchScreen(
                     modifier = Modifier
                         .clip(FlacifyTheme.shapes.pill)
                         .background(if (isSelected) FlacifyTheme.colors.accent else FlacifyTheme.colors.surfaceVariant)
-                        .clickable {
+                        .selectable(selected = isSelected, role = Role.RadioButton) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             selectedFilter = filter
                         }
+                        .heightIn(min = 48.dp)
                         .padding(horizontal = FlacifyTheme.spacing.md, vertical = FlacifyTheme.spacing.xs),
                     contentAlignment = Alignment.Center
                 ) {
@@ -183,18 +196,21 @@ fun SearchScreen(
         }
 
         // Search Results List
-        if (query.isNotBlank() && filteredResults.isEmpty()) {
+        if (!isSearching && query.isNotBlank() && filteredResults.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = FlacifyTheme.spacing.huge),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "No matches found.",
-                    style = FlacifyTheme.typography.bodyMedium,
-                    color = FlacifyTheme.colors.secondaryText
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("No matches found", style = FlacifyTheme.typography.bodyMedium, color = FlacifyTheme.colors.secondaryText)
+                    TextButton(onClick = {
+                        viewModel.clearQuery()
+                        focus.requestFocus()
+                        keyboard?.show()
+                    }) { Text("Try another search") }
+                }
             }
         } else {
             LazyColumn(
@@ -208,8 +224,7 @@ fun SearchScreen(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             viewModel.playSong(song)
-                        },
-                        onMoreClick = { }
+                        }
                     )
                 }
             }

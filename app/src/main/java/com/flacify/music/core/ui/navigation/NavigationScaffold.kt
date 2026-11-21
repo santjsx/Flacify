@@ -1,5 +1,7 @@
 package com.flacify.music.core.ui.navigation
 
+import androidx.compose.runtime.LaunchedEffect
+import com.flacify.music.core.data.scanner.ScanStatus
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -66,7 +68,7 @@ enum class NavigationDestination(val label: String, val icon: () -> ImageVector)
     HOME("Home", { FlacifyIcons.Home }),
     LIBRARY("Library", { FlacifyIcons.Library }),
     SEARCH("Search", { FlacifyIcons.Search }),
-    MORE("Settings", { FlacifyIcons.Settings })
+    MORE("Profile", { FlacifyIcons.Artist })
 }
 
 @Composable
@@ -144,6 +146,27 @@ fun NavigationScaffold(
     val nowPlayingViewModel: NowPlayingViewModel = hiltViewModel()
     val moreViewModel: MoreViewModel = hiltViewModel()
 
+    val scanStatus by homeViewModel.scanStatus.collectAsStateWithLifecycle()
+    val isScanning = scanStatus is ScanStatus.Scanning
+    LaunchedEffect(scanStatus) {
+        val message = when (val result = scanStatus) {
+            is ScanStatus.Completed -> if (result.addedCount > 0) "Library updated · ${result.addedCount} new tracks" else "Library scan complete"
+            is ScanStatus.Error -> result.message
+            else -> null
+        }
+        if (message != null) Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
+    fun browseSongs() {
+        isFavoritesOpen = false
+        isPlaylistsOpen = false
+        libraryViewModel.selectPlaylist(null)
+        libraryViewModel.selectAlbum(null)
+        libraryViewModel.selectArtist(null)
+        libraryViewModel.selectTab(LibraryTab.SONGS)
+        navigateTo(NavigationDestination.LIBRARY)
+    }
+
     val miniPlayerArtworkMood = rememberArtworkMood(
         artworkUri = currentSong?.artworkUri,
         fallbackColor = FlacifyTheme.colors.background,
@@ -172,13 +195,7 @@ fun NavigationScaffold(
                         viewModel = homeViewModel,
                         onNavigateToSearch = { navigateTo(NavigationDestination.SEARCH) },
                         onNavigateToSettings = { navigateTo(NavigationDestination.MORE) },
-                        onNavigateToSongs = {
-                            libraryViewModel.selectTab(LibraryTab.SONGS)
-                            libraryViewModel.selectAlbum(null)
-                            libraryViewModel.selectArtist(null)
-                            libraryViewModel.selectPlaylist(null)
-                            navigateTo(NavigationDestination.LIBRARY)
-                        },
+                        onNavigateToSongs = ::browseSongs,
                         onNavigateToAlbums = {
                             libraryViewModel.selectTab(LibraryTab.ALBUMS)
                             libraryViewModel.selectAlbum(null)
@@ -195,13 +212,16 @@ fun NavigationScaffold(
                         }
                     )
                     NavigationDestination.LIBRARY -> LibraryScreen(
-                        viewModel = libraryViewModel
+                        viewModel = libraryViewModel,
+                        onScanLibrary = homeViewModel::scanLibrary,
+                        isScanning = isScanning
                     )
                     NavigationDestination.SEARCH -> SearchScreen(
                         viewModel = searchViewModel
                     )
                     NavigationDestination.MORE -> MoreScreen(
                         viewModel = moreViewModel,
+                        isScanning = isScanning,
                         onRescanClick = { homeViewModel.scanLibrary() },
                         onEqualizerClick = { isMoreEqualizerOpen = true },
                         onSleepTimerClick = { isMoreSleepTimerOpen = true },
@@ -326,6 +346,7 @@ fun NavigationScaffold(
             FavoritesSheet(
                 songRepository = songRepository,
                 playbackRepository = playbackRepository,
+                onBrowseSongs = ::browseSongs,
                 onDismiss = { isFavoritesOpen = false }
             )
         }
@@ -335,6 +356,7 @@ fun NavigationScaffold(
             PlaylistsSheet(
                 playlistRepository = playlistRepository,
                 playbackRepository = playbackRepository,
+                onBrowseSongs = ::browseSongs,
                 onDismiss = { isPlaylistsOpen = false }
             )
         }

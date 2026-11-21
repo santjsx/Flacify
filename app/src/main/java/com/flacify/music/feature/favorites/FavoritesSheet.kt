@@ -1,5 +1,12 @@
 package com.flacify.music.feature.favorites
 
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.flacify.music.core.model.Song
+import com.flacify.music.core.ui.component.ConfirmRemovalDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,8 +44,6 @@ import com.flacify.music.core.designsystem.theme.FlacifyTheme
 import com.flacify.music.core.designsystem.theme.bounceClick
 import com.flacify.music.core.ui.component.FlacifyGlassSheet
 import com.flacify.music.core.ui.component.SongRow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,8 +51,11 @@ import kotlinx.coroutines.launch
 fun FavoritesSheet(
     songRepository: SongRepository,
     playbackRepository: PlaybackRepository,
+    onBrowseSongs: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    var songToRemove by remember { mutableStateOf<Song?>(null) }
     val haptic = LocalHapticFeedback.current
     val favorites by songRepository.getFavoriteSongs().collectAsStateWithLifecycle(initialValue = emptyList())
     val currentSong by playbackRepository.currentSong.collectAsStateWithLifecycle()
@@ -167,12 +175,9 @@ fun FavoritesSheet(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 playbackRepository.playSong(song, favorites)
                             },
-                            onMoreClick = {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    songRepository.setFavorite(song.id, false)
-                                    playbackRepository.updateFavoriteStatus(song.id, false)
-                                }
-                            }
+                            onMoreClick = { songToRemove = song },
+                            actionIcon = FlacifyIcons.HeartFilled,
+                            actionLabel = "Remove ${song.title} from favorites"
                         )
                     }
                 }
@@ -198,13 +203,29 @@ fun FavoritesSheet(
                         )
                         Spacer(modifier = Modifier.height(FlacifyTheme.spacing.xxs))
                         Text(
-                            text = "Tap the heart icon on any song to save it here.",
+                            text = "Open a song’s options in Library and choose Add to Favorites.",
                             style = FlacifyTheme.typography.bodyMedium,
                             color = FlacifyTheme.colors.secondaryText
                         )
+                        TextButton(onClick = onBrowseSongs) { Text("Browse songs") }
                     }
                 }
             }
         }
+    }
+    songToRemove?.let { song ->
+        ConfirmRemovalDialog(
+            title = "Remove from favorites?",
+            message = "Remove “${song.title}” from your favorites?",
+            action = "Remove",
+            onDismiss = { songToRemove = null },
+            onConfirm = {
+                songToRemove = null
+                scope.launch {
+                    songRepository.setFavorite(song.id, false)
+                    playbackRepository.updateFavoriteStatus(song.id, false)
+                }
+            }
+        )
     }
 }

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,13 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
+
+// Set TELEGRAM_API_ID and TELEGRAM_API_HASH from my.telegram.org in untracked local.properties.
+val telegramProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+val telegramApiId = telegramProperties.getProperty("TELEGRAM_API_ID")?.trim()?.toIntOrNull()?.takeIf { it > 0 } ?: 0
+val telegramApiHash = telegramProperties.getProperty("TELEGRAM_API_HASH")?.trim()?.takeIf { it.matches(Regex("[0-9a-fA-F]{32}")) }.orEmpty()
 
 android {
     namespace = "com.flacify.music"
@@ -17,6 +26,8 @@ android {
         targetSdk = 35
         versionCode = 8
         versionName = "1.0.7"
+        buildConfigField("int", "TELEGRAM_API_ID", "0")
+        buildConfigField("String", "TELEGRAM_API_HASH", "\"\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GITHUB_OWNER", "\"santjsx\"")
@@ -38,6 +49,8 @@ android {
             )
         }
         debug {
+            buildConfigField("int", "TELEGRAM_API_ID", telegramApiId.toString())
+            buildConfigField("String", "TELEGRAM_API_HASH", "\"$telegramApiHash\"")
             applicationIdSuffix = ".debug"
             isDebuggable = true
         }
@@ -73,6 +86,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.tdlib)
     // AndroidX & Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

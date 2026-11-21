@@ -103,6 +103,19 @@ cd flacify
 ./gradlew testDebugUnitTest
 ```
 
+### Optional Telegram music
+
+In the published APK, open **Profile → Telegram music**. Choose **Get Telegram app credentials** to register your application, then enter its numeric API ID and 32-character API hash in FLACify. The app encrypts them on this device using Android Keystore. Disconnecting removes the saved credentials. [Telegram API development tools](https://my.telegram.org/apps)
+
+For a private debug build, developers can optionally prefill these values in the project's untracked `local.properties`. Release builds always use on-device setup.
+
+```properties
+TELEGRAM_API_ID=your_numeric_api_id
+TELEGRAM_API_HASH=your_api_hash
+```
+
+After entering your credentials, sign in on the device and choose a channel or enter its public username. Tap a track to stream it, pull down to refresh, or choose **Sync all metadata** to index older tracks. The channel list and track metadata are cached on the device. Seeking requests audio at the new byte offset. **Clear cache** removes downloaded media. **Disconnect** signs out and clears the account’s channel index.
+
 ### 3. Build Debug APK
 ```bash
 ./gradlew assembleDebug
@@ -112,7 +125,7 @@ cd flacify
 ### 4. Build Optimized Release APK
 ```bash
 ./gradlew assembleRelease
-# Output: app/build/outputs/apk/release/app-release.apk (approx. 6.9 MB)
+# Output: app/build/outputs/apk/release/app-release.apk
 ```
 
 ---

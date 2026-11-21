@@ -152,7 +152,7 @@ fun NowPlayingScreen(
     }
 
     val song = currentSong!!
-    val artworkUri = "content://media/external/audio/albumart/${song.albumId}"
+    val artworkUri = song.artworkUri
     val backgroundBrush = rememberArtworkBackgroundBrush(
         artworkUri = artworkUri,
         backgroundColor = FlacifyTheme.colors.background,
@@ -276,12 +276,12 @@ fun NowPlayingScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
-                        model = "content://media/external/audio/albumart/${song.albumId}",
+                        model = song.artworkUri,
                         contentDescription = "${song.title} album artwork",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-                    if (song.albumId <= 0L) {
+                    if (song.albumId <= 0L && song.remoteArtworkUri == null) {
                         Icon(
                             imageVector = FlacifyIcons.MusicNote,
                             contentDescription = null,
@@ -315,7 +315,7 @@ fun NowPlayingScreen(
                     )
                 }
 
-                IconButton(
+                if (!song.isTelegram) IconButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         viewModel.toggleFavorite(song)
@@ -459,7 +459,7 @@ fun NowPlayingScreen(
                 ) {
                     if (nextSong != null) {
                         AsyncImage(
-                            model = "content://media/external/audio/albumart/${nextSong.albumId}",
+                            model = nextSong.artworkUri,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(20.dp)
@@ -556,7 +556,7 @@ fun NowPlayingScreen(
                     )
                 }
 
-                IconButton(
+                if (!song.isTelegram) IconButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showLyricsScreen = true
@@ -655,8 +655,7 @@ fun NowPlayingScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             viewModel.playQueueItem(queueSong)
                                             showQueueSheet = false
-                                        },
-                                        onMoreClick = {}
+                                        }
                                     )
                                 }
 
@@ -701,12 +700,12 @@ fun NowPlayingScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
-                            model = "content://media/external/audio/albumart/${song.albumId}",
+                            model = song.artworkUri,
                             contentDescription = "${song.title} artwork",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                        if (song.albumId <= 0L) {
+                        if (song.albumId <= 0L && song.remoteArtworkUri == null) {
                             Icon(
                                 imageVector = FlacifyIcons.MusicNote,
                                 contentDescription = null,
@@ -735,7 +734,7 @@ fun NowPlayingScreen(
                     }
                 }
 
-                MoreActionRow(
+                if (!song.isTelegram) MoreActionRow(
                     icon = if (isFavorite) FlacifyIcons.HeartFilled else FlacifyIcons.HeartOutline,
                     title = if (isFavorite) "Favorited" else "Add to Favorites",
                     iconTint = if (isFavorite) FlacifyTheme.colors.accent else androidx.compose.ui.graphics.Color(0xFFFA2D48),
@@ -743,7 +742,7 @@ fun NowPlayingScreen(
                         viewModel.toggleFavorite(song)
                     }
                 )
-                MoreActionRow(
+                if (!song.isTelegram) MoreActionRow(
                     icon = FlacifyIcons.Lyrics,
                     title = "Synchronized Lyrics",
                     iconTint = androidx.compose.ui.graphics.Color(0xFF6366F1),
@@ -761,7 +760,7 @@ fun NowPlayingScreen(
                         showEqualizerSheet = true
                     }
                 )
-                MoreActionRow(
+                if (!song.isTelegram) MoreActionRow(
                     icon = FlacifyIcons.PlaylistAdd,
                     title = "Add to Playlist",
                     iconTint = androidx.compose.ui.graphics.Color(0xFF10B981),
@@ -770,7 +769,7 @@ fun NowPlayingScreen(
                         showAddToPlaylistSheet = true
                     }
                 )
-                MoreActionRow(
+                if (!song.isTelegram) MoreActionRow(
                     icon = FlacifyIcons.Album,
                     title = "Go to Album",
                     iconTint = androidx.compose.ui.graphics.Color(0xFFF59E0B),
@@ -779,7 +778,7 @@ fun NowPlayingScreen(
                         onGoToAlbum(song.albumId)
                     }
                 )
-                MoreActionRow(
+                if (!song.isTelegram) MoreActionRow(
                     icon = FlacifyIcons.Artist,
                     title = "Go to Artist",
                     iconTint = androidx.compose.ui.graphics.Color(0xFF0EA5E9),

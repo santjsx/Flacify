@@ -27,13 +27,16 @@ data class Song(
     val sampleRate: Int = 0,
     val playCount: Int = 0,
     val lastPlayedTimestamp: Long = 0,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val remoteArtworkUri: String? = null
 ) {
     /**
      * URI for resolving local album artwork thumbnail.
      */
     val artworkUri: String
-        get() = "content://media/external/audio/albumart/$albumId"
+        get() = if (isTelegram) remoteArtworkUri.orEmpty() else "content://media/external/audio/albumart/$albumId"
+
+    val isTelegram: Boolean get() = mediaUri.startsWith("telegram://")
 
     /**
      * Resolves audiophile quality badge: LOSSLESS (FLAC, WAV, ALAC, AIFF) or HI-RES LOSSLESS (>48kHz / >=1.5Mbps).

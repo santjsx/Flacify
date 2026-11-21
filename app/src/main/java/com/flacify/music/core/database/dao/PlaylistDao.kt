@@ -1,5 +1,6 @@
 package com.flacify.music.core.database.dao
 
+import androidx.room.Transaction
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Insert
@@ -35,6 +36,15 @@ interface PlaylistDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: PlaylistEntity): Long
+
+    @Transaction
+    suspend fun insertPlaylistWithSong(playlist: PlaylistEntity, songId: Long?): Long {
+        val id = insertPlaylist(playlist)
+        if (songId != null) {
+            addSongToPlaylist(PlaylistTrackEntity(playlistId = id, songId = songId, sortOrder = playlist.createdAt.toInt()))
+        }
+        return id
+    }
 
     @Query("UPDATE playlists SET name = :newName, updated_at = :timestamp WHERE id = :playlistId")
     suspend fun renamePlaylist(playlistId: Long, newName: String, timestamp: Long)
