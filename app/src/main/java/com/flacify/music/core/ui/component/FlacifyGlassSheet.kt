@@ -41,12 +41,14 @@ fun FlacifyGlassSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.70f),
         dragHandle = null
     ) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(FlacifyTheme.colors.surface)
                 .background(FlacifyTheme.glass.sheetBackground)
                 .border(
                     FlacifyTheme.glass.borderLight,

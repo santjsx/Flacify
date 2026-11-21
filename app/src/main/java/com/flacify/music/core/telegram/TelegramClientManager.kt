@@ -91,9 +91,8 @@ class TelegramClientManager @Inject constructor(
         if (client != null) return@withContext
         val saved = try {
             credentials.load()
-        } catch (e: Exception) {
-            _auth.value = TelegramAuthState.WaitAppCredentials
-            throw IOException("Re-enter your Telegram app credentials to reconnect.", e)
+        } catch (_: Exception) {
+            null
         }
         val app = saved ?: if (BuildConfig.TELEGRAM_API_ID > 0 && BuildConfig.TELEGRAM_API_HASH.isNotEmpty())
             TelegramCredentials(BuildConfig.TELEGRAM_API_ID, BuildConfig.TELEGRAM_API_HASH) else null
@@ -206,7 +205,7 @@ class TelegramClientManager @Inject constructor(
     suspend fun logout() = withContext(dispatcher) {
         if (client == null) {
             credentials.clear()
-            _auth.value = TelegramAuthState.WaitAppCredentials
+            _auth.value = if (BuildConfig.TELEGRAM_API_ID > 0) TelegramAuthState.WaitPhoneNumber else TelegramAuthState.WaitAppCredentials
         } else {
             send(TdApi.LogOut())
             Unit
