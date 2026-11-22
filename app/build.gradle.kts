@@ -24,8 +24,8 @@ android {
         applicationId = "com.flacify.music"
         minSdk = 29
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.3.0"
+        versionCode = 14
+        versionName = "1.3.1"
         buildConfigField("int", "TELEGRAM_API_ID", telegramApiId.toString())
         buildConfigField("String", "TELEGRAM_API_HASH", "\"$telegramApiHash\"")
 
