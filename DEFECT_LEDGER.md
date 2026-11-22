@@ -91,6 +91,8 @@ Telegram library validation passed compileDebugKotlin, assembleDebug, 82 JVM tes
 
 | DEF-049 | Telegram login | Medium | Empty release API defaults sent every user to developer credential setup instead of phone-number login. | Read app-owned credentials from untracked build configuration for configured release builds. Telegram phone, code, and optional two-step verification continue through the existing authentication flow. |
 
+| DEF-050 | Telegram sign-in sheet | High | Changing sheet height during the initial authentication transition could leave the modal hidden on first open. | Keep a stable 85% sheet height through connection and phone entry. Verify the first-open path in the minified release. |
+
 ## 3. Performance Budget Tracking
 
 | Metric | Target Budget | Measured Value | Device / Config | Status |

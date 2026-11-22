@@ -60,10 +60,7 @@ fun TelegramSheet(onDismiss: () -> Unit, vm: TelegramViewModel = hiltViewModel()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(
-                    if (channel != null || auth is TelegramAuthState.Ready) Modifier.fillMaxHeight(0.85f)
-                    else Modifier.wrapContentHeight()
-                )
+                .fillMaxHeight(0.85f)
                 .imePadding()
                 .padding(horizontal = FlacifyTheme.spacing.md)
         ) {
