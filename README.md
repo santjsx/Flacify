@@ -105,16 +105,16 @@ cd flacify
 
 ### Optional Telegram music
 
-In the published APK, open **Profile → Telegram music**. Choose **Get Telegram app credentials** to register your application, then enter its numeric API ID and 32-character API hash in FLACify. The app encrypts them on this device using Android Keystore. Disconnecting removes the saved credentials. [Telegram API development tools](https://my.telegram.org/apps)
+Configured builds open **Profile → Telegram music** directly at phone-number login. Telegram then requests a verification code and, when enabled, the account's two-step verification password.
 
-For a private debug build, developers can optionally prefill these values in the project's untracked `local.properties`. Release builds always use on-device setup.
+Developers provide the application's API ID and hash in untracked local.properties before building. These values are included in the APK and can be extracted. Builds without configured credentials offer on-device app credential entry.
 
 ```properties
 TELEGRAM_API_ID=your_numeric_api_id
 TELEGRAM_API_HASH=your_api_hash
 ```
 
-After entering your credentials, sign in on the device and choose a channel or enter its public username. Tap a track to stream it, pull down to refresh, or choose **Sync all metadata** to index older tracks. The channel list and track metadata are cached on the device. Seeking requests audio at the new byte offset. **Clear cache** removes downloaded media. **Disconnect** signs out and clears the account’s channel index.
+Sign in on the device and choose a channel or enter its public username. Tap a track to stream it, pull down to refresh, or choose **Sync all metadata** to index older tracks. The channel list and track metadata are cached on the device. Seeking requests audio at the new byte offset. **Clear cache** removes downloaded media. **Disconnect** signs out and clears the account’s channel index.
 
 Telegram has its own **Songs**, **Albums**, and **Artists** views. Use **Sources** to open and sync channels, groups, or Saved Messages. The Telegram library is stored separately from the device music library. Album tags are read from completed audio downloads. Songs without those tags appear under **Unknown album**.
 

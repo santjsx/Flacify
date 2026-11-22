@@ -26,8 +26,8 @@ android {
         targetSdk = 35
         versionCode = 13
         versionName = "1.3.0"
-        buildConfigField("int", "TELEGRAM_API_ID", "0")
-        buildConfigField("String", "TELEGRAM_API_HASH", "\"\"")
+        buildConfigField("int", "TELEGRAM_API_ID", telegramApiId.toString())
+        buildConfigField("String", "TELEGRAM_API_HASH", "\"$telegramApiHash\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GITHUB_OWNER", "\"santjsx\"")
@@ -49,8 +49,6 @@ android {
             )
         }
         debug {
-            buildConfigField("int", "TELEGRAM_API_ID", telegramApiId.toString())
-            buildConfigField("String", "TELEGRAM_API_HASH", "\"$telegramApiHash\"")
             applicationIdSuffix = ".debug"
             isDebuggable = true
         }

@@ -89,6 +89,8 @@ Telegram library validation passed compileDebugKotlin, assembleDebug, 82 JVM tes
 
 | DEF-048 | Release configuration | High | An intervening change restored private Telegram values as shared build defaults and removed the on-device setup form. | Restore empty public defaults and validated on-device credential entry. Private local values apply only to debug builds. Release contents are scanned before upload. |
 
+| DEF-049 | Telegram login | Medium | Empty release API defaults sent every user to developer credential setup instead of phone-number login. | Read app-owned credentials from untracked build configuration for configured release builds. Telegram phone, code, and optional two-step verification continue through the existing authentication flow. |
+
 ## 3. Performance Budget Tracking
 
 | Metric | Target Budget | Measured Value | Device / Config | Status |
