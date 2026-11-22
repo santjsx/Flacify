@@ -24,8 +24,8 @@ android {
         applicationId = "com.flacify.music"
         minSdk = 29
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.2.0"
+        versionCode = 13
+        versionName = "1.3.0"
         buildConfigField("int", "TELEGRAM_API_ID", "0")
         buildConfigField("String", "TELEGRAM_API_HASH", "\"\"")
 
