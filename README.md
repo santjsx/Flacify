@@ -116,6 +116,8 @@ TELEGRAM_API_HASH=your_api_hash
 
 After entering your credentials, sign in on the device and choose a channel or enter its public username. Tap a track to stream it, pull down to refresh, or choose **Sync all metadata** to index older tracks. The channel list and track metadata are cached on the device. Seeking requests audio at the new byte offset. **Clear cache** removes downloaded media. **Disconnect** signs out and clears the account’s channel index.
 
+Telegram has its own **Songs**, **Albums**, and **Artists** views. Use **Sources** to open and sync channels, groups, or Saved Messages. The Telegram library is stored separately from the device music library. Album tags are read from completed audio downloads. Songs without those tags appear under **Unknown album**.
+
 ### 3. Build Debug APK
 ```bash
 ./gradlew assembleDebug

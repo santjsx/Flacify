@@ -71,6 +71,24 @@
 
 ---
 
+## Telegram sync verification — November 22, 2026
+
+| ID | Component | Severity | Root cause | Resolution and verification |
+|---|---|---|---|---|
+| DEF-043 | Telegram discovery | High | Cache statistics ran before discovery, and discovery excluded groups and Saved Messages. | Discover independently of optional cache statistics, load chat lists before enumerating, and include groups and Saved Messages. Regression tests cover discovery and cache failures. |
+| DEF-044 | Telegram indexing and playback | High | Only MessageAudio was indexed and resolved. Audio uploaded as documents was invisible. | Search music and documents with independent cursors. Reuse audio extraction in playback and cache deletion. Tests cover filtering, playback resolution, and pagination. |
+| DEF-045 | Telegram sync feedback | Medium | Discovery lacked loading feedback, cancellation could clear a newer job's busy state, and pagination depended on status text. | Explicit discovery and error states, guarded task completion, retry controls, and continued paging through document pages. |
+
+Validation for DEF-043 through DEF-045 passed compileDebugKotlin, 77 JVM tests, and 3 Android integration tests. Live account syncing remains unverified in the test environment.
+
+| DEF-046 | Telegram artwork | High | Thumbnail completion depended on a potentially empty remote unique ID. Alternate covers and embedded pictures were ignored, and the player's copied song metadata never received late artwork. | Resolve covers by account/chat/message with bounded downloads, use alternate covers and previews, extract embedded art from completed audio on IO, and update queue/player metadata without changing track position. Regression coverage checks empty IDs, external covers, and account-isolated artwork persistence. |
+
+| DEF-047 | Telegram library | Medium | Synced music was only browsable within individual sources. Album metadata was absent and refreshed message records could overwrite enriched tags. | Add Telegram-only Songs, Albums, Artists, and Sources views, account-scoped Room queries, tag extraction, and a non-destructive version 1 to 2 migration. Regression tests cover album/artist grouping, migration, stable playback IDs, and metadata preservation. |
+
+Telegram library validation passed compileDebugKotlin, assembleDebug, 82 JVM tests, and 5 Android tests on Android 16. The UI test covers Songs, Albums, Artists, Sources, collection drill-down, and selected-song queue order. Migration testing preserves track IDs and enriched tags. Live account syncing remains unverified.
+
+| DEF-048 | Release configuration | High | An intervening change restored private Telegram values as shared build defaults and removed the on-device setup form. | Restore empty public defaults and validated on-device credential entry. Private local values apply only to debug builds. Release contents are scanned before upload. |
+
 ## 3. Performance Budget Tracking
 
 | Metric | Target Budget | Measured Value | Device / Config | Status |
@@ -81,4 +99,4 @@
 | **Scrubber Touch Target** | >= 44 dp | 44 dp touch box with 4dp/8dp visual track | Touch Pointer Modifier | Passed |
 | **APK Build (Debug)** | Successful APK assembly | `app-debug.apk` (71.1 MB) | AGP 8.7.2 + Kotlin 2.0.21 | Passed |
 | **APK Build (Release - R8)**| Universal (4 ABIs) | `app-release.apk` (96.1 MB, TDLib C++ JNI ~91 MB uncompressed, classes.dex ~7.6 MB) | R8 Minify + Proguard + ShrinkResources | Passed |
-| **Unit Test Suite** | 100% Passing | 72 / 72 Passed | JUnit4 + MockK + CoroutinesTest | Passed |
+| **Unit Test Suite** | 100% Passing | 82 / 82 Passed | JUnit4 + MockK + CoroutinesTest | Passed |

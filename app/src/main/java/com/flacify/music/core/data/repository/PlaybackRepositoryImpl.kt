@@ -306,6 +306,27 @@ class PlaybackRepositoryImpl @Inject constructor(
         _currentPositionMs.value = 0L
     }
 
+    override fun updateArtwork(mediaUri: String, artworkUri: String) {
+        val updated = _queue.value.map { song ->
+            if (song.mediaUri == mediaUri) song.copy(remoteArtworkUri = artworkUri) else song
+        }
+        _queue.value = updated
+        _currentSong.value?.takeIf { it.mediaUri == mediaUri }?.let {
+            _currentSong.value = it.copy(remoteArtworkUri = artworkUri)
+        }
+        mediaController?.let { controller ->
+            for (index in 0 until controller.mediaItemCount) {
+                val item = controller.getMediaItemAt(index)
+                val song = updated.firstOrNull { it.id.toString() == item.mediaId && it.mediaUri == mediaUri } ?: continue
+                if (item.mediaMetadata.artworkUri?.toString() != artworkUri) {
+                    controller.replaceMediaItem(index, item.buildUpon().setMediaMetadata(
+                        item.mediaMetadata.buildUpon().setArtworkUri(song.artworkUri.toUri()).build()
+                    ).build())
+                }
+            }
+        }
+    }
+
     override fun updateFavoriteStatus(songId: Long, isFavorite: Boolean) {
         if (_currentSong.value?.id == songId) {
             _currentSong.value = _currentSong.value?.copy(isFavorite = isFavorite)

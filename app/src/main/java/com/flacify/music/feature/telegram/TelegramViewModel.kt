@@ -26,6 +26,21 @@ class TelegramViewModel @Inject constructor(
     val tracks = selected.flatMapLatest { channel ->
         if (channel == null) flowOf(emptyList()) else repository.dao.tracks(channel.accountId, channel.chatId)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _libraryTab = MutableStateFlow(0)
+    val libraryTab = _libraryTab.asStateFlow()
+    fun selectLibraryTab(tab: Int) { _libraryTab.value = tab }
+
+    val library = auth.flatMapLatest { state ->
+        if (state is TelegramAuthState.Ready) repository.dao.library(state.accountId) else flowOf(emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun playLibrary(track: TelegramTrack, visible: List<TelegramTrack>) {
+        val account = (auth.value as? TelegramAuthState.Ready)?.accountId ?: return
+        val queue = visible.filter { it.metadata.accountId == account }
+        val index = queue.indexOfFirst { it.playbackId == track.playbackId }
+        if (index >= 0) playback.playQueue(queue.map { it.toSong("") }, index)
+    }
+
     val playingSong = playback.currentSong
     val playbackState = playback.playbackState
     val playing = playback.isPlaying
@@ -33,11 +48,24 @@ class TelegramViewModel @Inject constructor(
     val status = _status.asStateFlow()
     private val _working = MutableStateFlow(false)
     val working = _working.asStateFlow()
+    private val _discovering = MutableStateFlow(false)
+    val discovering = _discovering.asStateFlow()
+    private val _syncError = MutableStateFlow(false)
+    val syncError = _syncError.asStateFlow()
+    private suspend fun updateCacheSize() {
+        try {
+            _size.value = cache.sizeBytes()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _size.value = null
+        }
+    }
     private val _size = MutableStateFlow<Long?>(null)
     val size = _size.asStateFlow()
     private val _hasMore = MutableStateFlow(false)
     val hasMore = _hasMore.asStateFlow()
-    private var cursor = 0L
+    private var cursor = TelegramPageCursor()
     private var job: Job? = null
 
     init {
@@ -45,12 +73,15 @@ class TelegramViewModel @Inject constructor(
             auth.collectLatest { state ->
                 if (state is TelegramAuthState.Ready) {
                     try {
-                        _size.value = cache.sizeBytes()
+                        _discovering.value = true
                         repository.getUserChannels()
+                        updateCacheSize()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         if (selected.value == null) _status.value = e.message ?: "Unable to refresh channels."
+                    } finally {
+                        _discovering.value = false
                     }
                 } else {
                     if (state == TelegramAuthState.LoggingOut || state == TelegramAuthState.Closed) job?.cancel()
@@ -67,17 +98,20 @@ class TelegramViewModel @Inject constructor(
         if (job?.isActive == true) return
         _working.value = true
         _status.value = ""
-        job = viewModelScope.launch {
+        _syncError.value = false
+        job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
                 action()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                _syncError.value = true
                 _status.value = e.message ?: "Telegram request failed. Try again."
             } finally {
-                _working.value = false
+                if (job == currentCoroutineContext()[Job]) _working.value = false
             }
         }
+        job?.start()
     }
 
     fun connect() = perform { client.start() }
@@ -94,19 +128,21 @@ class TelegramViewModel @Inject constructor(
     }
     fun refreshChannels() = perform {
         repository.getUserChannels()
-        _size.value = cache.sizeBytes()
+        updateCacheSize()
     }
     fun resolve(input: String) = perform { show(repository.resolvePublicChannel(input)) }
     fun select(channel: TelegramChannel) = perform { show(channel) }
     private suspend fun show(channel: TelegramChannel) {
         if (channel.accountId != client.account()) throw java.io.IOException("Select a channel from the connected account.")
         selected.value = channel
-        cursor = 0
+        cursor = TelegramPageCursor()
         _hasMore.value = false
         load(channel)
     }
     fun backToChannels() {
         job?.cancel()
+        job = null
+        _working.value = false
         selected.value = null
         _status.value = ""
         _hasMore.value = false
@@ -115,7 +151,7 @@ class TelegramViewModel @Inject constructor(
         val next = repository.page(channel, cursor)
         currentCoroutineContext().ensureActive()
         cursor = next
-        _hasMore.value = next != 0L
+        _hasMore.value = next.hasMore
     }
     fun loadNext() {
         val channel = selected.value ?: return
@@ -124,9 +160,10 @@ class TelegramViewModel @Inject constructor(
     fun refresh(all: Boolean = false) {
         val channel = selected.value ?: return
         perform {
-            cursor = 0
+            cursor = TelegramPageCursor()
             do {
                 load(channel)
+                if (all && _hasMore.value) _status.value = "Syncing older tracks..."
             } while (all && _hasMore.value)
             _status.value = if (all) "Metadata sync complete" else "Tracks refreshed"
         }

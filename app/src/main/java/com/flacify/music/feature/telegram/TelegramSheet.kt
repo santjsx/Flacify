@@ -38,6 +38,7 @@ fun TelegramSheet(onDismiss: () -> Unit, vm: TelegramViewModel = hiltViewModel()
     val auth by vm.auth.collectAsStateWithLifecycle()
     val channel by vm.channel.collectAsStateWithLifecycle()
     val working by vm.working.collectAsStateWithLifecycle()
+    val discovering by vm.discovering.collectAsStateWithLifecycle()
     val status by vm.status.collectAsStateWithLifecycle()
     var confirm by remember { mutableStateOf("") }
 
@@ -83,7 +84,7 @@ fun TelegramSheet(onDismiss: () -> Unit, vm: TelegramViewModel = hiltViewModel()
                         IconButton(
                             onClick = back,
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(48.dp)
                                 .clip(FlacifyTheme.shapes.circle)
                                 .background(FlacifyTheme.colors.surfaceVariant)
                         ) {
@@ -104,7 +105,7 @@ fun TelegramSheet(onDismiss: () -> Unit, vm: TelegramViewModel = hiltViewModel()
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (channel != null) "Stream lossless audio directly"
+                            text = if (channel != null) "Music from this chat"
                             else if (auth is TelegramAuthState.Ready) (auth as TelegramAuthState.Ready).displayName
                             else "Log in with your phone number",
                             style = FlacifyTheme.typography.caption,
@@ -113,9 +114,9 @@ fun TelegramSheet(onDismiss: () -> Unit, vm: TelegramViewModel = hiltViewModel()
                     }
                 }
                 IconButton(
-                    onClick = onDismiss,
+                    onClick = { vm.backToChannels(); onDismiss() },
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(48.dp)
                         .clip(FlacifyTheme.shapes.circle)
                         .background(FlacifyTheme.colors.surfaceVariant)
                 ) {
@@ -127,7 +128,7 @@ fun TelegramSheet(onDismiss: () -> Unit, vm: TelegramViewModel = hiltViewModel()
                 }
             }
 
-            if (working || auth == TelegramAuthState.Connecting) {
+            if (working || discovering || auth == TelegramAuthState.Connecting) {
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -150,34 +151,14 @@ fun TelegramSheet(onDismiss: () -> Unit, vm: TelegramViewModel = hiltViewModel()
             }
 
             when (val state = auth) {
-                TelegramAuthState.WaitAppCredentials -> {
-                    // Fallback only if credentials were never built or wiped
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Initializing Telegram...",
-                            style = FlacifyTheme.typography.bodyMedium,
-                            color = FlacifyTheme.colors.secondaryText
-                        )
-                        Button(
-                            onClick = vm::connect,
-                            shape = FlacifyTheme.shapes.medium,
-                            colors = ButtonDefaults.buttonColors(containerColor = FlacifyTheme.colors.accent),
-                            modifier = Modifier.fillMaxWidth().bounceClick()
-                        ) {
-                            Text("Connect", style = FlacifyTheme.typography.button)
-                        }
-                    }
-                }
+                TelegramAuthState.WaitAppCredentials -> TelegramAppSetup(working, vm::configure)
                 is TelegramAuthState.Ready -> {
                     if (channel?.accountId == state.accountId) {
                         TelegramTracks(vm, channel!!, working)
                     } else {
-                        TelegramChannels(vm, state, working, { confirm = "cache" }, { confirm = "logout" })
+                        TelegramLibrary(vm, state.accountId) {
+                            TelegramChannels(vm, state, working || discovering, { confirm = "cache" }, { confirm = "logout" })
+                        }
                     }
                 }
                 TelegramAuthState.Connecting, TelegramAuthState.LoggingOut -> {
@@ -492,7 +473,7 @@ private fun TelegramChannels(
         if (channels.isEmpty() && !busy) {
             item {
                 FlacifyEmptyStateLayout(
-                    title = "No Channels Indexed Yet",
+                    title = "Choose where your music is stored",
                     explanation = "Enter a public music channel username above or refresh your joined channels list.",
                     icon = FlacifyIcons.Library,
                     primaryActionLabel = "Refresh Channels",
@@ -590,14 +571,14 @@ private fun TelegramTracks(vm: TelegramViewModel, channel: TelegramChannel, busy
     val playing by vm.playing.collectAsStateWithLifecycle()
     val playbackState by vm.playbackState.collectAsStateWithLifecycle()
     val more by vm.hasMore.collectAsStateWithLifecycle()
-    val status by vm.status.collectAsStateWithLifecycle()
+    val syncError by vm.syncError.collectAsStateWithLifecycle()
     val list = rememberLazyListState()
     val nearEnd by remember { derivedStateOf {
         val info = list.layoutInfo
         info.totalItemsCount > 0 && (info.visibleItemsInfo.lastOrNull()?.index ?: -1) >= info.totalItemsCount - 4
     } }
-    LaunchedEffect(nearEnd, more, tracks.size, busy) {
-        if (nearEnd && more && !busy && (status.isEmpty() || status == "Tracks refreshed")) vm.loadNext()
+    LaunchedEffect(nearEnd, more, tracks.size, busy, syncError) {
+        if (nearEnd && more && !busy && !syncError) vm.loadNext()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -646,6 +627,13 @@ private fun TelegramTracks(vm: TelegramViewModel, channel: TelegramChannel, busy
             modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 32.dp)) {
+                if (syncError && !busy) {
+                    item {
+                        TextButton(onClick = { vm.refresh() }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Retry sync")
+                        }
+                    }
+                }
                 items(tracks, key = { it.playbackId }) { track ->
                     val song = remember(track, channel) { track.toSong(channel.title) }
                     SongRow(
@@ -654,11 +642,11 @@ private fun TelegramTracks(vm: TelegramViewModel, channel: TelegramChannel, busy
                         onClick = { vm.play(track) }
                     )
                 }
-                if (tracks.isEmpty() && !busy) {
+                if (tracks.isEmpty() && !busy && !more && !syncError) {
                     item {
                         FlacifyEmptyStateLayout(
-                            title = "No Audio Tracks Found",
-                            explanation = "This channel doesn't have any audio files yet, or indexing is still in progress.",
+                            title = "No music found",
+                            explanation = "Music and supported audio documents appear here. Try Refresh or choose another chat.",
                             icon = FlacifyIcons.MusicNote,
                             primaryActionLabel = "Refresh Channel",
                             onPrimaryAction = { vm.refresh() },
@@ -681,5 +669,34 @@ private fun TelegramTracks(vm: TelegramViewModel, channel: TelegramChannel, busy
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TelegramAppSetup(busy: Boolean, submit: (Int, String) -> Unit) {
+    var id by remember { mutableStateOf("") }
+    var hash by remember { mutableStateOf("") }
+    var attempted by remember { mutableStateOf(false) }
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    val number = id.trim().toIntOrNull()?.takeIf { it > 0 }
+    val validHash = Regex("[0-9a-fA-F]{32}").matches(hash.trim())
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Enter your Telegram app credentials to connect.")
+        TextButton(onClick = { uri.openUri("https://my.telegram.org/apps") }) { Text("Get Telegram app credentials") }
+        OutlinedTextField(id, { id = it }, label = { Text("API ID") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !busy,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = attempted && number == null,
+            supportingText = { if (attempted && number == null) Text("Enter a positive numeric API ID.") })
+        OutlinedTextField(hash, { hash = it }, label = { Text("API hash") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !busy,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            isError = attempted && !validHash,
+            supportingText = { if (attempted && !validHash) Text("Enter the 32-character hexadecimal hash.") })
+        Button(onClick = {
+            attempted = true
+            if (number != null && validHash) submit(number, hash.trim())
+        }, enabled = !busy) { Text("Continue") }
     }
 }
